@@ -4,7 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Agendamento da Quadra</title>
+
+  <!-- Carrega a lib do Supabase antes do seu script -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     body{font-family:system-ui, sans-serif; max-width:900px; margin:24px auto; padding:0 12px;}
     .row{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0;}
@@ -12,10 +15,14 @@
     button{cursor:pointer;}
     .card{border:1px solid #e5e5e5; border-radius:12px; padding:12px; margin:10px 0;}
     .muted{color:#666;}
+    .status{padding:10px 12px; border-radius:10px; margin:12px 0; border:1px solid #e5e5e5;}
   </style>
 </head>
 <body>
   <h2>Agenda da Quadra</h2>
+
+  <!-- Status visível (pra não depender de alert) -->
+  <div id="status" class="status">Carregando…</div>
 
   <div class="card">
     <b>Nova reserva</b>
@@ -32,26 +39,29 @@
     <div class="row">
       <input id="j1" placeholder="Jogador 1" />
       <input id="j2" placeholder="Jogador 2 (opcional)" />
-      <button id="btn">Reservar</button>
+      <button id="btn" type="button">Reservar</button>
     </div>
     <div class="muted">Regras: sem sobreposição • duração máxima 2h</div>
   </div>
 
   <div class="row">
     <input id="mes" type="month" />
-    <button id="reload">Carregar mês</button>
+    <button id="reload" type="button">Carregar mês</button>
   </div>
 
   <div id="lista"></div>
 
   <script>
-    alert("JS carregou ✅");
-    // 1) COLE AQUI seus dados do Supabase (Project Settings → API)
+    // Suas chaves (ok usar anon key no frontend)
     const SUPABASE_URL = "https://inscwmzaggpaqjqgmhyt.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imluc2N3bXphZ2dwYXFqcWdtaHl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MjE5NTIsImV4cCI6MjA4NTE5Nzk1Mn0.t50Y2hgRuxyHXnVyHKD4sRZEhMy10cid6LzNNM-nOIw";
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const $ = (id) => document.getElementById(id);
+
+    function setStatus(msg) {
+      $('status').textContent = msg;
+      console.log("[STATUS]", msg);
+    }
 
     function pad(n){ return String(n).padStart(2,'0'); }
 
@@ -75,88 +85,152 @@
       return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
     }
 
-    async function loadMonth(){
-      const ym = $('mes').value;
-      if (!ym) return alert("Selecione um mês.");
-      const { start, end } = monthRange(ym);
-
-      const { data, error } = await supabase
-        .from('reservas')
-        .select('id,data,horario_inicio,horario_fim,jogador1,jogador2,tipo')
-        .gte('data', start)
-        .lte('data', end)
-        .order('data', { ascending: true })
-        .order('horario_inicio', { ascending: true });
-
-      if (error) return alert("Erro ao carregar: " + error.message);
-
-      const container = $('lista');
-      container.innerHTML = "";
-
-      const grouped = groupByDate(data || []);
-      if (!grouped.length){
-        container.innerHTML = `<p class="muted">Sem reservas neste mês.</p>`;
-        return;
-      }
-
-      for (const [date, items] of grouped){
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `<b>${date}</b><div style="margin-top:8px;"></div>`;
-        const inner = card.querySelector('div');
-
-        inner.innerHTML = items.map(r => {
-          const title = [r.jogador1, r.jogador2].filter(Boolean).join(" vs ");
-          return `<div style="margin:6px 0;">
-            <b>${r.horario_inicio}–${r.horario_fim}</b> • <span>${r.tipo}</span><br/>
-            <span class="muted">${title || ""}</span>
-          </div>`;
-        }).join("");
-
-        container.appendChild(card);
-      }
-    }
-
     function toHHMMSS(hhmm){
-      // input type="time" costuma retornar HH:MM
       return hhmm.length === 5 ? (hhmm + ":00") : hhmm;
     }
 
-    async function reservar(){
-      const data = $('data').value;
-      const ini = $('ini').value;
-      const fim = $('fim').value;
-      const jogador1 = $('j1').value.trim();
-      const jogador2 = $('j2').value.trim();
-      const tipo = $('tipo').value;
-
-      if (!data || !ini || !fim || !jogador1) {
-        return alert("Preencha: data, início, fim e jogador 1.");
-      }
-
-      const { error } = await supabase.from('reservas').insert([{
-        data,
-        horario_inicio: toHHMMSS(ini),
-        horario_fim: toHHMMSS(fim),
-        jogador1,
-        jogador2: jogador2 || null,
-        tipo,
-        criador_id: "anon"
-      }]);
-
-      if (error) return alert("Não deu para reservar: " + error.message);
-
-      alert("Reserva criada!");
-      $('mes').value = data.slice(0,7);
-      await loadMonth();
+    // valida duração (<=2h) e ordem (fim>inicio)
+    function validateDuration(dateStr, iniStr, fimStr) {
+      const ini = new Date(`${dateStr}T${iniStr}:00`);
+      const fim = new Date(`${dateStr}T${fimStr}:00`);
+      if (!(fim > ini)) return { ok:false, msg:"O horário de fim precisa ser maior que o início." };
+      const diffMs = fim - ini;
+      const maxMs = 2 * 60 * 60 * 1000;
+      if (diffMs > maxMs) return { ok:false, msg:"A reserva não pode passar de 2 horas." };
+      return { ok:true };
     }
 
-    // defaults
-    const now = new Date();
-    $('mes').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
-    $('reload').onclick = loadMonth;
-    $('btn').onclick = reservar;
-    loadMonth();
+    document.addEventListener("DOMContentLoaded", async () => {
+      setStatus("JS carregou ✅ Iniciando…");
+
+      // 1) Cria cliente Supabase com try/catch
+      let supabase;
+      try {
+        if (!window.supabase) throw new Error("Biblioteca supabase-js não carregou (CDN).");
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (e) {
+        setStatus("Erro: " + e.message);
+        return;
+      }
+
+      // 2) Defaults de mês/data
+      const now = new Date();
+      $('mes').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+      $('data').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+      $('ini').value = "18:00";
+      $('fim').value = "19:00";
+
+      // 3) Teste rápido de conexão/permissão (SELECT)
+      try {
+        const test = await supabase
+          .from('reservas')
+          .select('id', { count: 'exact', head: true })
+          .limit(1);
+
+        if (test.error) {
+          setStatus("Supabase conectado, mas SELECT falhou: " + test.error.message);
+        } else {
+          setStatus("Supabase conectado ✅");
+        }
+      } catch (e) {
+        setStatus("Falha ao conectar no Supabase: " + e.message);
+      }
+
+      async function loadMonth(){
+        const ym = $('mes').value;
+        if (!ym) return alert("Selecione um mês.");
+        const { start, end } = monthRange(ym);
+
+        const { data, error } = await supabase
+          .from('reservas')
+          .select('id,data,horario_inicio,horario_fim,jogador1,jogador2,tipo')
+          .gte('data', start)
+          .lte('data', end)
+          .order('data', { ascending: true })
+          .order('horario_inicio', { ascending: true });
+
+        if (error) return alert("Erro ao carregar: " + error.message);
+
+        const container = $('lista');
+        container.innerHTML = "";
+
+        const grouped = groupByDate(data || []);
+        if (!grouped.length){
+          container.innerHTML = `<p class="muted">Sem reservas neste mês.</p>`;
+          return;
+        }
+
+        for (const [date, items] of grouped){
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `<b>${date}</b><div style="margin-top:8px;"></div>`;
+          const inner = card.querySelector('div');
+
+          inner.innerHTML = items.map(r => {
+            const title = [r.jogador1, r.jogador2].filter(Boolean).join(" vs ");
+            return `<div style="margin:6px 0;">
+              <b>${r.horario_inicio}–${r.horario_fim}</b> • <span>${r.tipo}</span><br/>
+              <span class="muted">${title || ""}</span>
+            </div>`;
+          }).join("");
+
+          container.appendChild(card);
+        }
+      }
+
+      async function reservar(){
+        console.log("Clique em Reservar ✅");
+
+        const data = $('data').value;
+        const ini = $('ini').value;
+        const fim = $('fim').value;
+        const jogador1 = $('j1').value.trim();
+        const jogador2 = $('j2').value.trim();
+        const tipo = $('tipo').value;
+
+        if (!data || !ini || !fim || !jogador1) {
+          return alert("Preencha: data, início, fim e jogador 1.");
+        }
+
+        const v = validateDuration(data, ini, fim);
+        if (!v.ok) return alert(v.msg);
+
+        const payload = {
+          data,
+          horario_inicio: toHHMMSS(ini),
+          horario_fim: toHHMMSS(fim),
+          jogador1,
+          jogador2: jogador2 || null,
+          tipo,
+          criador_id: "anon"
+        };
+
+        const { error } = await supabase.from('reservas').insert([payload]);
+
+        if (error) {
+          // Mensagem mais amigável pra conflito
+          const msg = (error.message || "").toLowerCase();
+          if (msg.includes("sem_sobreposicao") || msg.includes("conflict") || msg.includes("overlap")) {
+            return alert("Esse horário já está reservado. Escolha outro.");
+          }
+          if (msg.includes("max_2_horas")) {
+            return alert("A reserva não pode passar de 2 horas.");
+          }
+          return alert("Não deu para reservar: " + error.message);
+        }
+
+        alert("Reserva criada!");
+        $('mes').value = data.slice(0,7);
+        await loadMonth();
+      }
+
+      // 4) Bind dos botões
+      $('reload').addEventListener("click", loadMonth);
+      $('btn').addEventListener("click", reservar);
+
+      // 5) Carrega o mês ao abrir
+      await loadMonth();
+    });
   </script>
 </body>
 </html>
