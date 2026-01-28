@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Quadra de Tênis - Green Park</title>
 
+  <!-- Tenta carregar por dois CDNs (se um for bloqueado, o outro costuma funcionar) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
     :root { --b:#e6e6e6; --muted:#6b7280; }
@@ -79,6 +81,15 @@
     .footerBar .tab{margin:0;}
     .okBox{background:#eafaf1; border:1px solid #bfe8d0; border-radius:14px; padding:10px; margin-top:10px; font-size:13px;}
     .warnBox{background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px; margin-top:10px; font-size:13px;}
+
+    /* Banner de erro quando o JS não inicializa */
+    .fatal{
+      position:fixed; left:12px; right:12px; bottom:12px;
+      background:#111827; color:#fff; border-radius:14px; padding:12px 14px;
+      font-size:13px; z-index:9999; display:none;
+    }
+    .fatal b{display:block; margin-bottom:4px;}
+    .fatal code{background:rgba(255,255,255,.12); padding:2px 6px; border-radius:8px;}
   </style>
 </head>
 
@@ -203,26 +214,28 @@
     <div class="tab" id="tab-res-b">Reservar</div>
   </div>
 
+  <div id="fatal" class="fatal">
+    <b>O site não conseguiu inicializar</b>
+    <div id="fatalMsg"></div>
+  </div>
+
   <script>
     // ====== CONFIG ======
     const SUPABASE_URL = "https://inscwmzaggpaqjqgmhyt.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imluc2N3bXphZ2dwYXFqcWdtaHl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MjE5NTIsImV4cCI6MjA4NTE5Nzk1Mn0.t50Y2hgRuxyHXnVyHKD4sRZEhMy10cid6LzNNM-nOIw";
-
-    // Deve bater com o SQL (policy anon_insert)
     const CONDO_CODE_REQUIRED = "GREENPARK2026";
 
     const OPEN = "06:00";
     const CLOSE = "22:00";
     const STEP_MIN = 30;
 
-    // ====== HELPERS ======
+    // ====== HELPERS (sem depender do supabase ainda) ======
     const $ = (id)=>document.getElementById(id);
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
     const pad = (n)=>String(n).padStart(2,"0");
     const toISODate = (d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     const monthLabel = (y,m)=> new Date(y,m,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
     const weekdayLabel = (d)=> d.toLocaleDateString("pt-BR",{weekday:"long"}).toUpperCase();
+
     const parseTimeMin = (hhmm)=> {
       const [h,m]=hhmm.split(":").map(Number);
       return h*60+m;
@@ -233,48 +246,56 @@
     function rangesOverlap(aStart,aEnd,bStart,bEnd){
       return aStart < bEnd && aEnd > bStart; // [start,end)
     }
-
     function weekKey(dateObj){
       const d = new Date(dateObj);
       const day = (d.getDay()+6)%7; // Mon=0
       d.setDate(d.getDate()-day);
       return toISODate(d);
     }
-
     function isPastDate(dateStr){
       const today = toISODate(new Date());
       return dateStr < today;
     }
-
     function roundUpToStep(minutes, step){
       return Math.ceil(minutes / step) * step;
     }
 
-    // ====== STORAGE: guardar tokens criados no aparelho ======
+    function showFatal(message){
+      $("fatalMsg").innerHTML = `${message}<br><br><span class="muted">Dica: tente trocar de rede ou usar um CDN diferente.</span>`;
+      $("fatal").style.display = "block";
+      console.error("[FATAL]", message);
+    }
+
+    function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+    async function waitForSupabase(timeoutMs = 8000){
+      const start = Date.now();
+      while (!window.supabase) {
+        if (Date.now() - start > timeoutMs) return null;
+        await sleep(100);
+      }
+      return window.supabase;
+    }
+
+    // ====== STORAGE ======
     const STORE_KEY = "my_reservation_tokens_v1";
     function loadStore(){
       try { return JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); }
       catch { return {}; }
     }
-    function saveStore(obj){
-      localStorage.setItem(STORE_KEY, JSON.stringify(obj));
-    }
+    function saveStore(obj){ localStorage.setItem(STORE_KEY, JSON.stringify(obj)); }
     function rememberToken(resId, token){
-      const s = loadStore();
-      s[resId] = token;
-      saveStore(s);
+      const s = loadStore(); s[resId] = token; saveStore(s);
     }
     function forgetToken(resId){
-      const s = loadStore();
-      delete s[resId];
-      saveStore(s);
+      const s = loadStore(); delete s[resId]; saveStore(s);
     }
     function tokenFor(resId){
-      const s = loadStore();
-      return s[resId] || null;
+      const s = loadStore(); return s[resId] || null;
     }
 
     // ====== STATE ======
+    let supabase = null; // inicializa depois do waitForSupabase
     let current = new Date(); current.setDate(1);
     let selectedDate = toISODate(new Date());
     let monthRows = [];
@@ -283,7 +304,7 @@
     let selectedEndMin = null;
     let showOlder = false;
 
-    // ====== UI: Tabs ======
+    // ====== UI: Tabs (pode registrar já) ======
     function setTab(which){
       const calOn = which === "cal";
       $("view-cal").style.display = calOn ? "" : "none";
@@ -297,7 +318,7 @@
     $("tab-res").onclick = ()=>setTab("res");
     $("tab-res-b").onclick = ()=>setTab("res");
 
-    // ====== Data loading ======
+    // ====== Data loading (usa supabase, então só chama depois do init) ======
     async function fetchMonth(){
       const y = current.getFullYear();
       const m = current.getMonth()+1;
@@ -395,7 +416,6 @@
         $("days").appendChild(cell);
       }
 
-      // bloqueia datas passadas no date input também
       $("datePick").min = todayIso;
       if (selectedDate < todayIso) selectedDate = todayIso;
       $("datePick").value = selectedDate;
@@ -417,7 +437,6 @@
       }
 
       const weeks = [...byWeek.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
-
       const filtered = weeks.filter(([wk])=>{
         if (showOlder) return true;
         return wk >= weekKey(new Date(todayIso+"T00:00:00"));
@@ -477,7 +496,6 @@
             dayCard.style.borderColor = "#0ea75a";
           }
 
-          // se for dia passado, não deixa clicar pra reservar
           const past = dayIso < toISODate(new Date());
           dayCard.onclick = ()=>{
             if (past) return;
@@ -494,11 +512,8 @@
           wrap.innerHTML = dayItems.map(r=>{
             const title = [r.jogador1, r.jogador2].filter(Boolean).join(" vs ");
             const ql = `Quadra ${r.quadra || "-"}, Lote ${r.lote ?? "-"}`;
-
             const myToken = tokenFor(r.id);
-            const cancelBtn = myToken
-              ? `<button class="btn small ghost" data-cancel="${r.id}">Cancelar</button>`
-              : "";
+            const cancelBtn = myToken ? `<button class="btn small ghost" data-cancel="${r.id}">Cancelar</button>` : "";
 
             return `
               <div class="resItem">
@@ -521,7 +536,6 @@
         container.appendChild(weekDiv);
       }
 
-      // bind dos botões "Cancelar" (para reservas criadas neste aparelho)
       container.querySelectorAll("[data-cancel]").forEach(btn=>{
         btn.addEventListener("click", async (e)=>{
           e.stopPropagation();
@@ -555,7 +569,6 @@
 
       $("slots").innerHTML = "";
 
-      // bloqueio de passado no dia de hoje (horas já passaram)
       const todayIso = toISODate(new Date());
       let minStartToday = openMin;
       if (selectedDate === todayIso){
@@ -635,21 +648,17 @@
       return !!data;
     }
 
-    // Cancelamento via link: ?cancel=<token>
     async function handleCancelFromUrl(){
       const url = new URL(window.location.href);
       const token = url.searchParams.get("cancel");
       if (!token) return;
 
-      if (!confirm("Cancelar a reserva vinculada a este link?")) {
-        return;
-      }
+      if (!confirm("Cancelar a reserva vinculada a este link?")) return;
 
       const ok = await cancelByToken(token);
       if (ok) alert("Reserva cancelada!");
       else alert("Token inválido ou reserva já cancelada.");
 
-      // limpa o parâmetro da URL
       url.searchParams.delete("cancel");
       history.replaceState({}, "", url.toString());
 
@@ -672,13 +681,8 @@
     // ====== Actions ======
     async function confirmReservation(){
       const code = $("condoCode").value.trim();
-      if (code !== CONDO_CODE_REQUIRED){
-        return alert("Código do condomínio inválido.");
-      }
-
-      if (isPastDate(selectedDate)){
-        return alert("Não é possível reservar em datas passadas.");
-      }
+      if (code !== CONDO_CODE_REQUIRED) return alert("Código do condomínio inválido.");
+      if (isPastDate(selectedDate)) return alert("Não é possível reservar em datas passadas.");
 
       const j1 = $("j1").value.trim();
       const j2 = $("j2").value.trim();
@@ -693,7 +697,6 @@
       if (!loteRaw || Number.isNaN(lote) || lote <= 0) return alert("Preencha o Lote (número).");
       if (selectedStartMin==null || selectedEndMin==null) return alert("Selecione um horário disponível.");
 
-      // bloqueio de horas passadas no dia de hoje (extra no front)
       const todayIso = toISODate(new Date());
       if (selectedDate === todayIso){
         const now = new Date();
@@ -716,7 +719,6 @@
         criador_id: "anon"
       };
 
-      // Importante: retornar id e cancel_token
       const { data, error } = await supabase
         .from("reservas")
         .insert([payload])
@@ -728,28 +730,19 @@
         if (msg.includes("sem_sobreposicao") || msg.includes("overlap") || msg.includes("conflict")){
           return alert("Esse horário já foi reservado por outra pessoa. Escolha outro.");
         }
-        if (msg.includes("max_2_horas")){
-          return alert("A reserva não pode passar de 2 horas.");
-        }
-        if (msg.includes("no_past_date")){
-          return alert("Não é possível reservar em datas passadas.");
-        }
+        if (msg.includes("max_2_horas")) return alert("A reserva não pode passar de 2 horas.");
+        if (msg.includes("no_past_date")) return alert("Não é possível reservar em datas passadas.");
         if (msg.includes("row-level security") || msg.includes("policy")){
           return alert("Código inválido ou permissão negada (verifique o CONDO_CODE).");
         }
         return alert("Não deu para reservar: " + error.message);
       }
 
-      // salvar token no aparelho e mostrar link de cancelamento
       rememberToken(data.id, data.cancel_token);
       const base = window.location.origin + window.location.pathname;
       const cancelLink = `${base}?cancel=${data.cancel_token}`;
 
-      alert(
-        "Reserva criada!\n\n" +
-        "Guarde este link para cancelar a sua reserva a qualquer momento:\n\n" +
-        cancelLink
-      );
+      alert("Reserva criada!\n\nGuarde este link para cancelar:\n\n" + cancelLink);
 
       selectedStartMin=null; selectedEndMin=null;
       await fetchMonth();
@@ -758,15 +751,9 @@
     }
 
     // ====== Events ======
-    $("prevMonth").onclick = async ()=>{
-      current.setMonth(current.getMonth()-1);
-      await fetchMonth();
-    };
-    $("nextMonth").onclick = async ()=>{
-      current.setMonth(current.getMonth()+1);
-      await fetchMonth();
-    };
-    $("reloadMonth").onclick = fetchMonth;
+    $("prevMonth").onclick = async ()=>{ current.setMonth(current.getMonth()-1); await fetchMonth(); };
+    $("nextMonth").onclick = async ()=>{ current.setMonth(current.getMonth()+1); await fetchMonth(); };
+    $("reloadMonth").onclick = ()=>fetchMonth();
 
     $("toggleOlder").onclick = ()=>{
       showOlder = !showOlder;
@@ -776,9 +763,7 @@
 
     $("loadDay").onclick = async ()=>{
       const picked = $("datePick").value || selectedDate;
-      if (isPastDate(picked)){
-        return alert("Data passada está bloqueada.");
-      }
+      if (isPastDate(picked)) return alert("Data passada está bloqueada.");
       selectedDate = picked;
       selectedStartMin=null; selectedEndMin=null;
       renderMonthUI();
@@ -786,11 +771,7 @@
       await fetchDay(selectedDate);
     };
 
-    $("duration").onchange = ()=>{
-      selectedStartMin=null; selectedEndMin=null;
-      buildSlots();
-      updateSummary();
-    };
+    $("duration").onchange = ()=>{ selectedStartMin=null; selectedEndMin=null; buildSlots(); updateSummary(); };
 
     $("tipo").onchange = updateSummary;
     $("j1").oninput = updateSummary;
@@ -798,15 +779,28 @@
     $("quadra").oninput = updateSummary;
     $("lote").oninput = updateSummary;
 
-    $("confirm").onclick = confirmReservation;
-    $("showMyLinks").onclick = showMyCancelLinks;
+    $("confirm").onclick = ()=>confirmReservation();
+    $("showMyLinks").onclick = ()=>showMyCancelLinks();
 
-    // ====== Boot ======
+    // ====== Boot (agora à prova de CDN lento/bloqueado) ======
     (async function init(){
+      const sb = await waitForSupabase();
+      if (!sb){
+        showFatal('Não consegui carregar a biblioteca do Supabase. (CDN bloqueado ou lento).');
+        return;
+      }
+
+      try{
+        supabase = sb.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (e){
+        showFatal("Erro ao criar cliente Supabase: " + (e.message || e));
+        return;
+      }
+
       current = new Date(); current.setDate(1);
       selectedDate = toISODate(new Date());
 
-      renderMonthUI(); // para aplicar min date
+      renderMonthUI();
       await fetchMonth();
       await fetchDay(selectedDate);
       await handleCancelFromUrl();
