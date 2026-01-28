@@ -3,234 +3,814 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Agendamento da Quadra</title>
+  <title>Quadra de Tênis - Green Park</title>
 
-  <!-- Carrega a lib do Supabase antes do seu script -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    body{font-family:system-ui, sans-serif; max-width:900px; margin:24px auto; padding:0 12px;}
-    .row{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0;}
-    input, select, button{padding:10px; font-size:14px;}
-    button{cursor:pointer;}
-    .card{border:1px solid #e5e5e5; border-radius:12px; padding:12px; margin:10px 0;}
-    .muted{color:#666;}
-    .status{padding:10px 12px; border-radius:10px; margin:12px 0; border:1px solid #e5e5e5;}
+    :root { --b:#e6e6e6; --muted:#6b7280; }
+    body{font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin:0; background:#fafafa;}
+    .topbar{background:#0ea75a; color:#fff; padding:14px 16px; position:sticky; top:0; z-index:10;}
+    .topbar .title{font-weight:700; font-size:18px; display:flex; align-items:center; gap:10px;}
+    .topbar .subtitle{font-size:12px; opacity:.9; margin-left:28px; margin-top:2px;}
+    .wrap{max-width:1100px; margin:0 auto; padding:14px;}
+    .card{background:#fff; border:1px solid var(--b); border-radius:14px; padding:12px; box-shadow:0 1px 0 rgba(0,0,0,.02);}
+    .row{display:flex; gap:10px; flex-wrap:wrap;}
+    .muted{color:var(--muted);}
+    .btn{border:1px solid var(--b); background:#fff; padding:10px 12px; border-radius:12px; cursor:pointer;}
+    .btn.primary{background:#0ea75a; color:#fff; border-color:#0ea75a;}
+    .btn.ghost{background:#f7f7f7;}
+    .btn.small{padding:7px 10px; border-radius:10px; font-size:13px;}
+    .btn:disabled{opacity:.45; cursor:not-allowed;}
+    input, select{border:1px solid var(--b); border-radius:12px; padding:10px 12px; font-size:14px; background:#fff;}
+    .tabs{display:flex; gap:8px; margin:10px 0 14px;}
+    .tab{flex:1; text-align:center; padding:10px 12px; border-radius:12px; border:1px solid var(--b); cursor:pointer; background:#fff;}
+    .tab.active{background:#eafaf1; border-color:#bfe8d0; color:#0b7a43; font-weight:700;}
+    .grid{display:grid; gap:10px;}
+    .two{grid-template-columns: 1fr 1fr;}
+    @media(max-width:900px){ .two{grid-template-columns:1fr;} }
+
+    .monthHeader{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+    .monthTitle{font-weight:800; font-size:16px; text-transform:capitalize;}
+    .cal{margin-top:10px;}
+    .dow{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; font-size:12px; color:var(--muted); padding:0 2px 6px;}
+    .days{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+    .day{
+      min-height:56px; border:1px solid var(--b); border-radius:12px; padding:8px;
+      background:#fff; cursor:pointer; position:relative;
+    }
+    .day.off{background:#fcfcfc; color:#b3b3b3; cursor:default;}
+    .day.selected{outline:2px solid #0ea75a; border-color:#0ea75a;}
+    .day.past{background:#f7f7f7; color:#b3b3b3; cursor:not-allowed;}
+    .day .n{font-weight:700; font-size:13px;}
+    .badge{
+      position:absolute; top:6px; right:6px;
+      min-width:18px; height:18px; padding:0 6px;
+      border-radius:999px; background:#eef2ff; color:#3730a3; font-size:12px;
+      display:flex; align-items:center; justify-content:center; border:1px solid #e5e7eb;
+    }
+    .todayTag{
+      position:absolute; bottom:6px; right:6px;
+      font-size:11px; padding:2px 8px; border-radius:999px;
+      background:#0ea75a; color:#fff;
+    }
+
+    .slots{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+    .slot{border:1px solid var(--b); background:#fff; padding:8px 10px; border-radius:12px; cursor:pointer; font-size:13px;}
+    .slot.selected{background:#0ea75a; color:#fff; border-color:#0ea75a;}
+    .slot.busy{background:#fff5f5; border-color:#fecaca; color:#991b1b; cursor:not-allowed;}
+    .slot.out{opacity:.5; cursor:not-allowed;}
+
+    .weekCard{border:1px solid var(--b); border-radius:14px; padding:12px; background:#fff;}
+    .weekTitle{display:flex; align-items:center; justify-content:space-between;}
+    .weekTitle b{font-size:14px;}
+    .dayList{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;}
+    @media(max-width:900px){ .dayList{grid-template-columns:1fr;} }
+    .dayCard{border:1px solid var(--b); border-radius:14px; padding:10px; background:#fff;}
+    .dayCard .hdr{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+    .pill{font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--b); background:#f7f7f7;}
+    .resItem{border-top:1px dashed #eee; margin-top:8px; padding-top:8px; font-size:13px;}
+    .resItem b{font-size:13px;}
+
+    .footerBar{
+      position:sticky; bottom:0; background:#fff; border-top:1px solid var(--b);
+      display:flex; gap:8px; padding:10px 12px;
+    }
+    .footerBar .tab{margin:0;}
+    .okBox{background:#eafaf1; border:1px solid #bfe8d0; border-radius:14px; padding:10px; margin-top:10px; font-size:13px;}
+    .warnBox{background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px; margin-top:10px; font-size:13px;}
   </style>
 </head>
+
 <body>
-  <h2>Agenda da Quadra</h2>
-
-  <!-- Status visível (pra não depender de alert) -->
-  <div id="status" class="status">Carregando…</div>
-
-  <div class="card">
-    <b>Nova reserva</b>
-    <div class="row">
-      <input id="data" type="date" />
-      <input id="ini" type="time" step="300" />
-      <input id="fim" type="time" step="300" />
-      <select id="tipo">
-        <option value="treino">Treino</option>
-        <option value="ranking">Ranking</option>
-        <option value="jogo">Jogo</option>
-      </select>
-    </div>
-    <div class="row">
-      <input id="j1" placeholder="Jogador 1" />
-      <input id="j2" placeholder="Jogador 2 (opcional)" />
-      <button id="btn" type="button">Reservar</button>
-    </div>
-    <div class="muted">Regras: sem sobreposição • duração máxima 2h</div>
+  <div class="topbar">
+    <div class="title">🎾 Quadra de Tênis</div>
+    <div class="subtitle">Green Park</div>
   </div>
 
-  <div class="row">
-    <input id="mes" type="month" />
-    <button id="reload" type="button">Carregar mês</button>
+  <div class="wrap">
+
+    <div class="tabs">
+      <div class="tab active" id="tab-cal">Calendário</div>
+      <div class="tab" id="tab-res">Reservar</div>
+    </div>
+
+    <div id="view-cal" class="grid two">
+      <div class="card">
+        <div class="monthHeader">
+          <button class="btn small" id="prevMonth">◀</button>
+          <div class="monthTitle" id="monthTitle">mês</div>
+          <button class="btn small" id="nextMonth">▶</button>
+        </div>
+
+        <div class="cal">
+          <div class="dow">
+            <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div>
+          </div>
+          <div class="days" id="days"></div>
+        </div>
+
+        <div class="muted" style="margin-top:10px;">
+          Datas passadas ficam bloqueadas.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between; align-items:center;">
+          <div>
+            <b>Agenda do Mês</b><br>
+            <span class="muted">Reservas agrupadas por semana</span>
+          </div>
+          <button class="btn small ghost" id="reloadMonth">Atualizar</button>
+        </div>
+
+        <div style="margin-top:12px;">
+          <button class="btn small" id="toggleOlder">Ver dias anteriores</button>
+        </div>
+
+        <div id="weeks" style="margin-top:12px; display:grid; gap:10px;"></div>
+      </div>
+    </div>
+
+    <div id="view-res" class="grid two" style="display:none;">
+      <div class="card">
+        <b>Selecione o dia</b>
+        <div class="muted">Escolha a data e a duração. Datas passadas não permitem reservar.</div>
+
+        <div class="row" style="margin-top:10px; align-items:center;">
+          <input id="datePick" type="date" />
+          <select id="duration">
+            <option value="30">30 min</option>
+            <option value="60" selected>1 hora</option>
+            <option value="90">1h 30min</option>
+            <option value="120">2 horas</option>
+          </select>
+          <button class="btn small ghost" id="loadDay">Carregar horários</button>
+        </div>
+
+        <div class="okBox" id="dayInfo" style="display:none;"></div>
+
+        <div style="margin-top:12px;">
+          <b>Horários disponíveis</b>
+          <div class="muted">Toque no horário inicial. O final é calculado pela duração.</div>
+          <div class="slots" id="slots"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <b>Dados da Reserva</b>
+
+        <div class="warnBox">
+          <b>Código do condomínio</b><br>
+          <span class="muted">Necessário para criar reservas.</span>
+          <div class="row" style="margin-top:8px;">
+            <input id="condoCode" placeholder="Ex: GREENPARK2026" style="flex:1; min-width:220px;" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <select id="tipo" style="min-width:180px;">
+            <option value="treino" selected>Treino</option>
+            <option value="ranking">Ranking</option>
+            <option value="jogo">Jogo</option>
+          </select>
+          <input id="j1" placeholder="Jogador 1" style="flex:1; min-width:220px;" />
+          <input id="j2" placeholder="Jogador 2 (opcional)" style="flex:1; min-width:220px;" />
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <input id="quadra" placeholder="Quadra (ex: Q)" style="min-width:160px;" />
+          <input id="lote" placeholder="Lote (ex: 1)" inputmode="numeric" style="min-width:160px;" />
+        </div>
+
+        <div class="okBox" id="summary" style="display:none;"></div>
+
+        <div class="row" style="margin-top:10px; justify-content:space-between; align-items:center;">
+          <button class="btn ghost" id="showMyLinks" type="button">Meus links de cancelamento</button>
+          <button class="btn primary" id="confirm" type="button">Confirmar Reserva</button>
+        </div>
+
+        <div class="muted" style="margin-top:10px;">
+          Cancelamento: você receberá um link/token para cancelar depois.
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <div id="lista"></div>
+  <div class="footerBar">
+    <div class="tab active" id="tab-cal-b">Calendário</div>
+    <div class="tab" id="tab-res-b">Reservar</div>
+  </div>
 
   <script>
-    // Suas chaves (ok usar anon key no frontend)
+    // ====== CONFIG ======
     const SUPABASE_URL = "https://inscwmzaggpaqjqgmhyt.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imluc2N3bXphZ2dwYXFqcWdtaHl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MjE5NTIsImV4cCI6MjA4NTE5Nzk1Mn0.t50Y2hgRuxyHXnVyHKD4sRZEhMy10cid6LzNNM-nOIw";
 
-    const $ = (id) => document.getElementById(id);
+    // Deve bater com o SQL (policy anon_insert)
+    const CONDO_CODE_REQUIRED = "GREENPARK2026";
 
-    function setStatus(msg) {
-      $('status').textContent = msg;
-      console.log("[STATUS]", msg);
+    const OPEN = "06:00";
+    const CLOSE = "22:00";
+    const STEP_MIN = 30;
+
+    // ====== HELPERS ======
+    const $ = (id)=>document.getElementById(id);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const pad = (n)=>String(n).padStart(2,"0");
+    const toISODate = (d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const monthLabel = (y,m)=> new Date(y,m,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+    const weekdayLabel = (d)=> d.toLocaleDateString("pt-BR",{weekday:"long"}).toUpperCase();
+    const parseTimeMin = (hhmm)=> {
+      const [h,m]=hhmm.split(":").map(Number);
+      return h*60+m;
+    };
+    const minToTime = (min)=> `${pad(Math.floor(min/60))}:${pad(min%60)}:00`;
+    const minToHHMM = (min)=> `${pad(Math.floor(min/60))}:${pad(min%60)}`;
+
+    function rangesOverlap(aStart,aEnd,bStart,bEnd){
+      return aStart < bEnd && aEnd > bStart; // [start,end)
     }
 
-    function pad(n){ return String(n).padStart(2,'0'); }
+    function weekKey(dateObj){
+      const d = new Date(dateObj);
+      const day = (d.getDay()+6)%7; // Mon=0
+      d.setDate(d.getDate()-day);
+      return toISODate(d);
+    }
 
-    function monthRange(ym){
-      const [y,m] = ym.split('-').map(Number);
+    function isPastDate(dateStr){
+      const today = toISODate(new Date());
+      return dateStr < today;
+    }
+
+    function roundUpToStep(minutes, step){
+      return Math.ceil(minutes / step) * step;
+    }
+
+    // ====== STORAGE: guardar tokens criados no aparelho ======
+    const STORE_KEY = "my_reservation_tokens_v1";
+    function loadStore(){
+      try { return JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); }
+      catch { return {}; }
+    }
+    function saveStore(obj){
+      localStorage.setItem(STORE_KEY, JSON.stringify(obj));
+    }
+    function rememberToken(resId, token){
+      const s = loadStore();
+      s[resId] = token;
+      saveStore(s);
+    }
+    function forgetToken(resId){
+      const s = loadStore();
+      delete s[resId];
+      saveStore(s);
+    }
+    function tokenFor(resId){
+      const s = loadStore();
+      return s[resId] || null;
+    }
+
+    // ====== STATE ======
+    let current = new Date(); current.setDate(1);
+    let selectedDate = toISODate(new Date());
+    let monthRows = [];
+    let dayRows = [];
+    let selectedStartMin = null;
+    let selectedEndMin = null;
+    let showOlder = false;
+
+    // ====== UI: Tabs ======
+    function setTab(which){
+      const calOn = which === "cal";
+      $("view-cal").style.display = calOn ? "" : "none";
+      $("view-res").style.display = calOn ? "none" : "";
+
+      for (const id of ["tab-cal","tab-cal-b"]) $(id).classList.toggle("active", calOn);
+      for (const id of ["tab-res","tab-res-b"]) $(id).classList.toggle("active", !calOn);
+    }
+    $("tab-cal").onclick = ()=>setTab("cal");
+    $("tab-cal-b").onclick = ()=>setTab("cal");
+    $("tab-res").onclick = ()=>setTab("res");
+    $("tab-res-b").onclick = ()=>setTab("res");
+
+    // ====== Data loading ======
+    async function fetchMonth(){
+      const y = current.getFullYear();
+      const m = current.getMonth()+1;
       const start = `${y}-${pad(m)}-01`;
-      const endDate = new Date(y, m, 0);
-      const end = `${y}-${pad(m)}-${pad(endDate.getDate())}`;
-      return { start, end };
+      const end = `${y}-${pad(m)}-${pad(new Date(y,m,0).getDate())}`;
+
+      const { data, error } = await supabase
+        .from("reservas")
+        .select("id,data,horario_inicio,horario_fim,jogador1,jogador2,tipo,quadra,lote,canceled_at")
+        .is("canceled_at", null)
+        .gte("data", start)
+        .lte("data", end)
+        .order("data",{ascending:true})
+        .order("horario_inicio",{ascending:true});
+
+      if (error){ alert("Erro ao carregar mês: " + error.message); return; }
+      monthRows = data || [];
+      renderMonthUI();
+      renderWeeks();
     }
 
-    function groupByDate(rows){
-      const map = new Map();
-      for (const r of rows){
-        if (!map.has(r.data)) map.set(r.data, []);
-        map.get(r.data).push(r);
+    async function fetchDay(dateStr){
+      const { data, error } = await supabase
+        .from("reservas")
+        .select("id,data,horario_inicio,horario_fim,jogador1,jogador2,tipo,quadra,lote,canceled_at")
+        .is("canceled_at", null)
+        .eq("data", dateStr)
+        .order("horario_inicio",{ascending:true});
+
+      if (error){ alert("Erro ao carregar dia: " + error.message); return; }
+      dayRows = data || [];
+      buildSlots();
+      updateSummary();
+    }
+
+    // ====== Calendar render ======
+    function renderMonthUI(){
+      const y = current.getFullYear();
+      const m = current.getMonth();
+      $("monthTitle").textContent = monthLabel(y,m);
+
+      const counts = new Map();
+      for (const r of monthRows){
+        counts.set(r.data, (counts.get(r.data)||0)+1);
       }
-      for (const [k,v] of map.entries()){
-        v.sort((a,b)=> (a.horario_inicio||"").localeCompare(b.horario_inicio||""));
+
+      const first = new Date(y,m,1);
+      const last = new Date(y,m+1,0);
+      const startDow = (first.getDay()+6)%7; // Mon=0
+      const totalDays = last.getDate();
+
+      const todayIso = toISODate(new Date());
+
+      $("days").innerHTML = "";
+      for (let i=0;i<42;i++){
+        const cell = document.createElement("div");
+        cell.className = "day off";
+        const dayNum = i - startDow + 1;
+
+        if (dayNum>=1 && dayNum<=totalDays){
+          const dObj = new Date(y,m,dayNum);
+          const iso = toISODate(dObj);
+
+          const past = iso < todayIso;
+          cell.className = "day" + (iso===selectedDate ? " selected" : "") + (past ? " past" : "");
+          cell.innerHTML = `<div class="n">${dayNum}</div>`;
+
+          if (counts.get(iso)){
+            const b = document.createElement("div");
+            b.className = "badge";
+            b.textContent = counts.get(iso);
+            cell.appendChild(b);
+          }
+          if (iso === todayIso){
+            const t = document.createElement("div");
+            t.className = "todayTag";
+            t.textContent = "Hoje";
+            cell.appendChild(t);
+          }
+
+          if (!past){
+            cell.onclick = ()=>{
+              selectedDate = iso;
+              $("datePick").value = selectedDate;
+              selectedStartMin = null; selectedEndMin = null;
+              renderMonthUI();
+              renderWeeks();
+              fetchDay(selectedDate);
+            };
+          }
+        } else {
+          cell.innerHTML = `<div class="n"> </div>`;
+        }
+
+        $("days").appendChild(cell);
       }
-      return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+
+      // bloqueia datas passadas no date input também
+      $("datePick").min = todayIso;
+      if (selectedDate < todayIso) selectedDate = todayIso;
+      $("datePick").value = selectedDate;
     }
 
-    function toHHMMSS(hhmm){
-      return hhmm.length === 5 ? (hhmm + ":00") : hhmm;
-    }
+    // ====== Weeks render ======
+    function renderWeeks(){
+      const container = $("weeks");
+      container.innerHTML = "";
 
-    // valida duração (<=2h) e ordem (fim>inicio)
-    function validateDuration(dateStr, iniStr, fimStr) {
-      const ini = new Date(`${dateStr}T${iniStr}:00`);
-      const fim = new Date(`${dateStr}T${fimStr}:00`);
-      if (!(fim > ini)) return { ok:false, msg:"O horário de fim precisa ser maior que o início." };
-      const diffMs = fim - ini;
-      const maxMs = 2 * 60 * 60 * 1000;
-      if (diffMs > maxMs) return { ok:false, msg:"A reserva não pode passar de 2 horas." };
-      return { ok:true };
-    }
+      const todayIso = toISODate(new Date());
 
-    document.addEventListener("DOMContentLoaded", async () => {
-      setStatus("JS carregou ✅ Iniciando…");
+      const byWeek = new Map();
+      for (const r of monthRows){
+        const d = new Date(r.data+"T00:00:00");
+        const wk = weekKey(d);
+        if (!byWeek.has(wk)) byWeek.set(wk, []);
+        byWeek.get(wk).push(r);
+      }
 
-      // 1) Cria cliente Supabase com try/catch
-      let supabase;
-      try {
-        if (!window.supabase) throw new Error("Biblioteca supabase-js não carregou (CDN).");
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      } catch (e) {
-        setStatus("Erro: " + e.message);
+      const weeks = [...byWeek.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+
+      const filtered = weeks.filter(([wk])=>{
+        if (showOlder) return true;
+        return wk >= weekKey(new Date(todayIso+"T00:00:00"));
+      });
+
+      if (!filtered.length){
+        container.innerHTML = `<div class="muted">Sem reservas para este filtro.</div>`;
         return;
       }
 
-      // 2) Defaults de mês/data
-      const now = new Date();
-      $('mes').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
-      $('data').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-      $('ini').value = "18:00";
-      $('fim').value = "19:00";
+      for (const [wk, items] of filtered){
+        const wkStart = new Date(wk+"T00:00:00");
+        const wkEnd = new Date(wkStart); wkEnd.setDate(wkEnd.getDate()+6);
+        const label = `${pad(wkStart.getDate())}/${pad(wkStart.getMonth()+1)} – ${pad(wkEnd.getDate())}/${pad(wkEnd.getMonth()+1)}`;
 
-      // 3) Teste rápido de conexão/permissão (SELECT)
-      try {
-        const test = await supabase
-          .from('reservas')
-          .select('id', { count: 'exact', head: true })
-          .limit(1);
+        const weekDiv = document.createElement("div");
+        weekDiv.className = "weekCard";
+        weekDiv.innerHTML = `
+          <div class="weekTitle">
+            <b>Semana (${label})</b>
+            <span class="muted">${items.length} reserva(s)</span>
+          </div>
+          <div class="dayList"></div>
+        `;
 
-        if (test.error) {
-          setStatus("Supabase conectado, mas SELECT falhou: " + test.error.message);
-        } else {
-          setStatus("Supabase conectado ✅");
-        }
-      } catch (e) {
-        setStatus("Falha ao conectar no Supabase: " + e.message);
-      }
+        const dayList = weekDiv.querySelector(".dayList");
 
-      async function loadMonth(){
-        const ym = $('mes').value;
-        if (!ym) return alert("Selecione um mês.");
-        const { start, end } = monthRange(ym);
-
-        const { data, error } = await supabase
-          .from('reservas')
-          .select('id,data,horario_inicio,horario_fim,jogador1,jogador2,tipo')
-          .gte('data', start)
-          .lte('data', end)
-          .order('data', { ascending: true })
-          .order('horario_inicio', { ascending: true });
-
-        if (error) return alert("Erro ao carregar: " + error.message);
-
-        const container = $('lista');
-        container.innerHTML = "";
-
-        const grouped = groupByDate(data || []);
-        if (!grouped.length){
-          container.innerHTML = `<p class="muted">Sem reservas neste mês.</p>`;
-          return;
+        const days = [];
+        for (let i=0;i<7;i++){
+          const d = new Date(wkStart);
+          d.setDate(d.getDate()+i);
+          if (d.getMonth() === current.getMonth()){
+            days.push(toISODate(d));
+          }
         }
 
-        for (const [date, items] of grouped){
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `<b>${date}</b><div style="margin-top:8px;"></div>`;
-          const inner = card.querySelector('div');
+        for (const dayIso of days){
+          const dayObj = new Date(dayIso+"T00:00:00");
+          const dayName = weekdayLabel(dayObj);
+          const isSel = dayIso===selectedDate;
 
-          inner.innerHTML = items.map(r => {
+          const dayItems = monthRows.filter(x=>x.data===dayIso);
+
+          const dayCard = document.createElement("div");
+          dayCard.className = "dayCard";
+          dayCard.innerHTML = `
+            <div class="hdr">
+              <div><b>${pad(dayObj.getDate())}/${pad(dayObj.getMonth()+1)}</b> <span class="muted">• ${dayName}</span></div>
+              <span class="pill">${dayItems.length}</span>
+            </div>
+            <div class="muted" style="margin-top:6px;">${dayItems.length ? "" : "Clique para agendar"}</div>
+            <div class="resWrap"></div>
+          `;
+
+          if (isSel){
+            dayCard.style.outline = "2px solid #0ea75a";
+            dayCard.style.borderColor = "#0ea75a";
+          }
+
+          // se for dia passado, não deixa clicar pra reservar
+          const past = dayIso < toISODate(new Date());
+          dayCard.onclick = ()=>{
+            if (past) return;
+            selectedDate = dayIso;
+            $("datePick").value = selectedDate;
+            selectedStartMin = null; selectedEndMin = null;
+            renderMonthUI();
+            renderWeeks();
+            fetchDay(selectedDate);
+            setTab("res");
+          };
+
+          const wrap = dayCard.querySelector(".resWrap");
+          wrap.innerHTML = dayItems.map(r=>{
             const title = [r.jogador1, r.jogador2].filter(Boolean).join(" vs ");
-            return `<div style="margin:6px 0;">
-              <b>${r.horario_inicio}–${r.horario_fim}</b> • <span>${r.tipo}</span><br/>
-              <span class="muted">${title || ""}</span>
-            </div>`;
+            const ql = `Quadra ${r.quadra || "-"}, Lote ${r.lote ?? "-"}`;
+
+            const myToken = tokenFor(r.id);
+            const cancelBtn = myToken
+              ? `<button class="btn small ghost" data-cancel="${r.id}">Cancelar</button>`
+              : "";
+
+            return `
+              <div class="resItem">
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                  <div>
+                    <b>${(r.horario_inicio||"").slice(0,5)}–${(r.horario_fim||"").slice(0,5)}</b>
+                    <span class="pill" style="margin-left:6px;">${r.tipo}</span><br/>
+                    <span class="muted">${title || ""}</span><br/>
+                    <span class="muted">${ql}</span>
+                  </div>
+                  <div>${cancelBtn}</div>
+                </div>
+              </div>
+            `;
           }).join("");
 
-          container.appendChild(card);
+          dayList.appendChild(dayCard);
         }
+
+        container.appendChild(weekDiv);
       }
 
-      async function reservar(){
-        console.log("Clique em Reservar ✅");
+      // bind dos botões "Cancelar" (para reservas criadas neste aparelho)
+      container.querySelectorAll("[data-cancel]").forEach(btn=>{
+        btn.addEventListener("click", async (e)=>{
+          e.stopPropagation();
+          const resId = btn.getAttribute("data-cancel");
+          const tok = tokenFor(resId);
+          if (!tok) return alert("Token não encontrado neste aparelho.");
+          if (!confirm("Cancelar esta reserva agora?")) return;
+          const ok = await cancelByToken(tok);
+          if (ok){
+            forgetToken(resId);
+            alert("Reserva cancelada!");
+            await fetchMonth();
+            await fetchDay(selectedDate);
+          }
+        });
+      });
+    }
 
-        const data = $('data').value;
-        const ini = $('ini').value;
-        const fim = $('fim').value;
-        const jogador1 = $('j1').value.trim();
-        const jogador2 = $('j2').value.trim();
-        const tipo = $('tipo').value;
+    // ====== Slots build ======
+    function buildSlots(){
+      const dur = Number($("duration").value);
+      const openMin = parseTimeMin(OPEN);
+      const closeMin = parseTimeMin(CLOSE);
 
-        if (!data || !ini || !fim || !jogador1) {
-          return alert("Preencha: data, início, fim e jogador 1.");
-        }
-
-        const v = validateDuration(data, ini, fim);
-        if (!v.ok) return alert(v.msg);
-
-        const payload = {
-          data,
-          horario_inicio: toHHMMSS(ini),
-          horario_fim: toHHMMSS(fim),
-          jogador1,
-          jogador2: jogador2 || null,
-          tipo,
-          criador_id: "anon"
+      const busy = dayRows.map(r=>{
+        return {
+          s: parseTimeMin((r.horario_inicio||"00:00:00").slice(0,5)),
+          e: parseTimeMin((r.horario_fim||"00:00:00").slice(0,5)),
         };
+      });
 
-        const { error } = await supabase.from('reservas').insert([payload]);
+      $("slots").innerHTML = "";
 
-        if (error) {
-          // Mensagem mais amigável pra conflito
-          const msg = (error.message || "").toLowerCase();
-          if (msg.includes("sem_sobreposicao") || msg.includes("conflict") || msg.includes("overlap")) {
-            return alert("Esse horário já está reservado. Escolha outro.");
-          }
-          if (msg.includes("max_2_horas")) {
-            return alert("A reserva não pode passar de 2 horas.");
-          }
-          return alert("Não deu para reservar: " + error.message);
-        }
-
-        alert("Reserva criada!");
-        $('mes').value = data.slice(0,7);
-        await loadMonth();
+      // bloqueio de passado no dia de hoje (horas já passaram)
+      const todayIso = toISODate(new Date());
+      let minStartToday = openMin;
+      if (selectedDate === todayIso){
+        const now = new Date();
+        const nowMin = now.getHours()*60 + now.getMinutes();
+        minStartToday = Math.max(openMin, roundUpToStep(nowMin, STEP_MIN));
       }
 
-      // 4) Bind dos botões
-      $('reload').addEventListener("click", loadMonth);
-      $('btn').addEventListener("click", reservar);
+      const lastStart = closeMin - dur;
+      for (let t=openMin; t<=lastStart; t+=STEP_MIN){
+        const end = t + dur;
+        const isBusy = busy.some(b=>rangesOverlap(t,end,b.s,b.e));
+        const isPastTime = (selectedDate === todayIso) && (t < minStartToday);
 
-      // 5) Carrega o mês ao abrir
-      await loadMonth();
-    });
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "slot" + (isBusy ? " busy" : "") + (isPastTime ? " out" : "") + (selectedStartMin===t ? " selected" : "");
+        btn.textContent = minToHHMM(t);
+
+        if (isBusy || isPastTime){
+          btn.disabled = true;
+        } else {
+          btn.onclick = ()=>{
+            selectedStartMin = t;
+            selectedEndMin = end;
+            buildSlots();
+            updateSummary();
+          };
+        }
+        $("slots").appendChild(btn);
+      }
+
+      const d = new Date(selectedDate+"T00:00:00");
+      $("dayInfo").style.display = "";
+      $("dayInfo").innerHTML = `
+        <b>${weekdayLabel(d).toLowerCase()}, ${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}</b><br/>
+        <span class="muted">Duração: ${dur} minutos • Horário: ${OPEN}–${CLOSE}</span>
+      `;
+    }
+
+    // ====== Summary ======
+    function updateSummary(){
+      if (selectedStartMin==null || selectedEndMin==null){
+        $("summary").style.display = "none";
+        return;
+      }
+
+      const dur = Number($("duration").value);
+      const tipo = $("tipo").value;
+      const j1 = $("j1").value.trim();
+      const j2 = $("j2").value.trim();
+      const quadra = $("quadra").value.trim();
+      const lote = $("lote").value.trim();
+
+      const timeIni = minToHHMM(selectedStartMin);
+      const timeFim = minToHHMM(selectedEndMin);
+
+      $("summary").style.display = "";
+      $("summary").innerHTML = `
+        <b>Resumo da Reserva</b><br/>
+        <b>Data:</b> ${selectedDate}<br/>
+        <b>Horário:</b> ${timeIni} às ${timeFim}<br/>
+        <b>Duração:</b> ${dur} minutos<br/>
+        <b>Tipo:</b> ${tipo}<br/>
+        <b>Jogadores:</b> ${j1 || "—"}${j2 ? " vs "+j2 : ""}<br/>
+        <b>Quadra/Lote:</b> Quadra ${quadra || "—"} • Lote ${lote || "—"}
+      `;
+    }
+
+    // ====== Cancelamento ======
+    async function cancelByToken(token){
+      const { data, error } = await supabase.rpc("cancel_reserva", { p_token: token });
+      if (error){
+        alert("Erro ao cancelar: " + error.message);
+        return false;
+      }
+      return !!data;
+    }
+
+    // Cancelamento via link: ?cancel=<token>
+    async function handleCancelFromUrl(){
+      const url = new URL(window.location.href);
+      const token = url.searchParams.get("cancel");
+      if (!token) return;
+
+      if (!confirm("Cancelar a reserva vinculada a este link?")) {
+        return;
+      }
+
+      const ok = await cancelByToken(token);
+      if (ok) alert("Reserva cancelada!");
+      else alert("Token inválido ou reserva já cancelada.");
+
+      // limpa o parâmetro da URL
+      url.searchParams.delete("cancel");
+      history.replaceState({}, "", url.toString());
+
+      await fetchMonth();
+      await fetchDay(selectedDate);
+    }
+
+    function showMyCancelLinks(){
+      const s = loadStore();
+      const ids = Object.keys(s);
+      if (!ids.length){
+        alert("Nenhum link salvo neste aparelho ainda.");
+        return;
+      }
+      const base = window.location.origin + window.location.pathname;
+      const lines = ids.map(id => `${base}?cancel=${s[id]}`);
+      alert("Links salvos neste aparelho:\n\n" + lines.join("\n\n"));
+    }
+
+    // ====== Actions ======
+    async function confirmReservation(){
+      const code = $("condoCode").value.trim();
+      if (code !== CONDO_CODE_REQUIRED){
+        return alert("Código do condomínio inválido.");
+      }
+
+      if (isPastDate(selectedDate)){
+        return alert("Não é possível reservar em datas passadas.");
+      }
+
+      const j1 = $("j1").value.trim();
+      const j2 = $("j2").value.trim();
+      const tipo = $("tipo").value;
+
+      const quadra = $("quadra").value.trim();
+      const loteRaw = $("lote").value.trim();
+      const lote = Number(loteRaw);
+
+      if (!j1) return alert("Preencha pelo menos o Jogador 1.");
+      if (!quadra) return alert("Preencha a Quadra (ex: Q).");
+      if (!loteRaw || Number.isNaN(lote) || lote <= 0) return alert("Preencha o Lote (número).");
+      if (selectedStartMin==null || selectedEndMin==null) return alert("Selecione um horário disponível.");
+
+      // bloqueio de horas passadas no dia de hoje (extra no front)
+      const todayIso = toISODate(new Date());
+      if (selectedDate === todayIso){
+        const now = new Date();
+        const nowMin = now.getHours()*60 + now.getMinutes();
+        if (selectedStartMin < roundUpToStep(nowMin, STEP_MIN)){
+          return alert("Esse horário já passou. Escolha outro.");
+        }
+      }
+
+      const payload = {
+        data: selectedDate,
+        horario_inicio: minToTime(selectedStartMin),
+        horario_fim: minToTime(selectedEndMin),
+        jogador1: j1,
+        jogador2: j2 || null,
+        tipo,
+        quadra,
+        lote,
+        access_code: code,
+        criador_id: "anon"
+      };
+
+      // Importante: retornar id e cancel_token
+      const { data, error } = await supabase
+        .from("reservas")
+        .insert([payload])
+        .select("id,cancel_token")
+        .single();
+
+      if (error){
+        const msg = (error.message||"").toLowerCase();
+        if (msg.includes("sem_sobreposicao") || msg.includes("overlap") || msg.includes("conflict")){
+          return alert("Esse horário já foi reservado por outra pessoa. Escolha outro.");
+        }
+        if (msg.includes("max_2_horas")){
+          return alert("A reserva não pode passar de 2 horas.");
+        }
+        if (msg.includes("no_past_date")){
+          return alert("Não é possível reservar em datas passadas.");
+        }
+        if (msg.includes("row-level security") || msg.includes("policy")){
+          return alert("Código inválido ou permissão negada (verifique o CONDO_CODE).");
+        }
+        return alert("Não deu para reservar: " + error.message);
+      }
+
+      // salvar token no aparelho e mostrar link de cancelamento
+      rememberToken(data.id, data.cancel_token);
+      const base = window.location.origin + window.location.pathname;
+      const cancelLink = `${base}?cancel=${data.cancel_token}`;
+
+      alert(
+        "Reserva criada!\n\n" +
+        "Guarde este link para cancelar a sua reserva a qualquer momento:\n\n" +
+        cancelLink
+      );
+
+      selectedStartMin=null; selectedEndMin=null;
+      await fetchMonth();
+      await fetchDay(selectedDate);
+      setTab("cal");
+    }
+
+    // ====== Events ======
+    $("prevMonth").onclick = async ()=>{
+      current.setMonth(current.getMonth()-1);
+      await fetchMonth();
+    };
+    $("nextMonth").onclick = async ()=>{
+      current.setMonth(current.getMonth()+1);
+      await fetchMonth();
+    };
+    $("reloadMonth").onclick = fetchMonth;
+
+    $("toggleOlder").onclick = ()=>{
+      showOlder = !showOlder;
+      $("toggleOlder").textContent = showOlder ? "Ocultar dias anteriores" : "Ver dias anteriores";
+      renderWeeks();
+    };
+
+    $("loadDay").onclick = async ()=>{
+      const picked = $("datePick").value || selectedDate;
+      if (isPastDate(picked)){
+        return alert("Data passada está bloqueada.");
+      }
+      selectedDate = picked;
+      selectedStartMin=null; selectedEndMin=null;
+      renderMonthUI();
+      renderWeeks();
+      await fetchDay(selectedDate);
+    };
+
+    $("duration").onchange = ()=>{
+      selectedStartMin=null; selectedEndMin=null;
+      buildSlots();
+      updateSummary();
+    };
+
+    $("tipo").onchange = updateSummary;
+    $("j1").oninput = updateSummary;
+    $("j2").oninput = updateSummary;
+    $("quadra").oninput = updateSummary;
+    $("lote").oninput = updateSummary;
+
+    $("confirm").onclick = confirmReservation;
+    $("showMyLinks").onclick = showMyCancelLinks;
+
+    // ====== Boot ======
+    (async function init(){
+      current = new Date(); current.setDate(1);
+      selectedDate = toISODate(new Date());
+
+      renderMonthUI(); // para aplicar min date
+      await fetchMonth();
+      await fetchDay(selectedDate);
+      await handleCancelFromUrl();
+    })();
   </script>
 </body>
 </html>
