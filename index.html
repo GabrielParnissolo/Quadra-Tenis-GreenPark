@@ -73,119 +73,97 @@
     .monthTitle{font-weight:800; font-size:16px; text-transform:capitalize;}
     .cal{margin-top:10px;}
     .dow{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; font-size:12px; color:var(--muted); padding:0 2px 6px;}
-    .days{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
-    .day{
-      min-height:56px; border:1px solid var(--b); border-radius:12px; padding:8px;
-      background:#fff; cursor:pointer; position:relative;
-    }
-    .day.off{background:#fcfcfc; color:#b3b3b3; cursor:default;}
-    .day.selected{outline:2px solid #0ea75a; border-color:#0ea75a;}
-    .day.past{background:#f7f7f7; color:#b3b3b3; cursor:not-allowed;}
-    .day .n{
-  font-weight:700;
-  font-size:13px;
-  padding-right:20px; /* ✅ reserva espaço pro badge não encostar no número */
-}
-    .badge{
-  position:absolute;
-  bottom:6px;
-  left:6px;
-  top:auto;
-  right:auto;
+    .days{display:grid; grid-template-columns:repeat(7,1fr); gap:10px;}
 
-  min-width:18px;
-  height:18px;
-  padding:0 6px;
-
-  border-radius:999px;
-  background:#eef2ff;
-  color:#3730a3;
-  font-size:12px;
+/* === DIA (CARD PADRÃO) === */
+.day{
+  min-height:70px;
+  padding:10px 8px;
+  border:1px solid var(--b);
+  border-radius:12px;
+  background:#f3f4f6;
+  cursor:pointer;
+  position:relative;
 
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
-
-  border:1px solid #e5e7eb;
 }
 
-    .todayTag{
-      position:absolute; bottom:6px; right:6px;
-      font-size:11px; padding:2px 8px; border-radius:999px;
-      background:#0ea75a; color:#fff;
-    }
+/* dias fora do mês */
+.day.off{
+  background:#f3f4f6;
+  color:#b3b3b3;
+  cursor:default;
+  opacity:.45;
+}
 
-    /* ✅ No dia de hoje, esconder a quantidade */
-.todayCell .badge{
+/* datas passadas */
+.day.past{
+  background:#f3f4f6;
+  color:#b3b3b3;
+  cursor:not-allowed;
+  opacity:.55;
+}
+
+/* selecionado */
+.day.selected{
+  outline:2px solid #0ea75a;
+  border-color:#0ea75a;
+  background:#eafaf1;
+}
+
+/* sigla do dia (SEG/TER/QUA) */
+.day .w{
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.06em;
+  color:#6b7280;
+  margin-bottom:6px;
+  text-transform:uppercase;
+}
+
+/* número do dia */
+.day .n{
+  font-size:22px;
+  font-weight:800;
+  line-height:1.1;
+  padding-right:0;
+}
+
+/* bolinha (indicador de reservas) */
+.badge{
+  width:12px;
+  height:12px;
+  min-width:12px;
+  padding:0;
+  border-radius:999px;
+  border:none;
+  background:#9ca3af;       /* cinza = reservas antigas (passado) */
+  color:transparent;        /* esconde texto */
+  position:absolute;
+  top:10px;
+  right:10px;
+}
+
+/* vermelho = reservas futuras (hoje ou depois) */
+.day.dot-red .badge{
+  background:#ef4444;
+}
+
+/* HOJE: card branco */
+.day.todayCell{
+  background:#fff;
+}
+
+/* não mostrar bolinha no HOJE */
+.day.todayCell .badge{
   display:none !important;
 }
 
-    .slots{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
-    .slot{border:1px solid var(--b); background:#fff; padding:8px 10px; border-radius:12px; cursor:pointer; font-size:13px;}
-    .slot.selected{background:#0ea75a; color:#fff; border-color:#0ea75a;}
-    .slot.busy{background:#fff5f5; border-color:#fecaca; color:#991b1b; cursor:not-allowed;}
-    .slot.out{opacity:.5; cursor:not-allowed;}
-
-    .weekCard{border:1px solid var(--b); border-radius:14px; padding:12px; background:#fff;}
-    .weekTitle{display:flex; align-items:center; justify-content:space-between;}
-    .weekTitle b{font-size:14px;}
-    .dayList{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;}
-    @media(max-width:900px){ .dayList{grid-template-columns:1fr;} }
-    .dayCard{border:1px solid var(--b); border-radius:14px; padding:10px; background:#fff;}
-    .dayCard .hdr{display:flex; align-items:center; justify-content:space-between; gap:8px;}
-    .pill{font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--b); background:#f7f7f7;}
-    .resItem{border-top:1px dashed #eee; margin-top:8px; padding-top:8px; font-size:13px;}
-    .resItem b{font-size:13px;}
-
-    .footerBar{
-      position:sticky; bottom:0; background:#fff; border-top:1px solid var(--b);
-      display:flex; gap:8px; padding:10px 12px;
-    }
-    .footerBar .tab{margin:0;}
-    .okBox{background:#eafaf1; border:1px solid #bfe8d0; border-radius:14px; padding:10px; margin-top:10px; font-size:13px;}
-    .warnBox{background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px; margin-top:10px; font-size:13px;}
-
-    .fatal{
-      position:fixed; left:12px; right:12px; top:12px;
-      background:#111827; color:#fff; border-radius:14px; padding:12px 14px;
-      font-size:13px; z-index:99998; display:none;
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
-    }
-    .fatal b{display:block; margin-bottom:4px;}
-    
-    /* ===== AJUSTES MOBILE (CALENDÁRIO) ===== */
-@media (max-width: 480px) {
-  .day {
-    min-height: 44px;
-    padding: 6px;
-  }
-
-  .day .n {
-    font-size: 12px;
-    padding-right: 18px;
-  }
-
-  /* Quantidade de reservas (embaixo à esquerda) */
-  .badge{
-    bottom:6px;
-    left:6px;
-    top:auto;
-    right:auto;
-
-    font-size:11px;
-    height:16px;
-    min-width:16px;
-    padding:0 5px;
-  }
-
-  /* Hoje (embaixo à direita) */
-  .todayTag{
-    bottom:6px;
-    right:6px;
-    font-size:10px;
-    padding:1px 6px;
-  }
-}
+/* esconder selo antigo "Hoje" */
+.todayTag{ display:none !important; }
 
   </style>
 </head>
@@ -362,6 +340,7 @@
     const toISODate = (d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     const monthLabel = (y,m)=> new Date(y,m,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
     const weekdayLabel = (d)=> d.toLocaleDateString("pt-BR",{weekday:"long"}).toUpperCase();
+    const weekdayShort = (d)=> d.toLocaleDateString("pt-BR",{weekday:"short"}).replace(".", "").toUpperCase();
     const parseTimeMin = (hhmm)=> {
       const [h,m]=hhmm.split(":").map(Number);
       return h*60+m;
@@ -503,8 +482,32 @@
             const iso = toISODate(dObj);
 
             const past = iso < todayIso;
-            cell.className = "day" + (iso===selectedDate ? " selected" : "") + (past ? " past" : "");
-            cell.innerHTML = `<div class="n">${dayNum}</div>`;
+
+cell.className =
+  "day" +
+  (iso === selectedDate ? " selected" : "") +
+  (past ? " past" : "");
+
+// SIGLA DO DIA
+const wShort = weekdayShort(dObj);
+cell.innerHTML = `
+  <div class="w">${wShort}</div>
+  <div class="n">${dayNum}</div>
+`;
+
+// ===== BOLINHA (badge) =====
+const c = counts.get(iso) || 0;
+if (c > 0){
+  const b = document.createElement("div");
+  b.className = "badge";
+  b.textContent = "";
+  cell.appendChild(b);
+
+  // futuro (hoje ou depois) = vermelho | passado = cinza
+  if (!past) cell.classList.add("dot-red");
+}
+
+
 
             if (counts.get(iso)){
               const b = document.createElement("div");
@@ -514,13 +517,20 @@ b.textContent = count > 9 ? "9+" : count;
 
               cell.appendChild(b);
             }
-            if (iso === todayIso){
-  cell.classList.add("todayCell"); // ✅ marca o dia de hoje
+           if (iso === todayIso){
+  cell.classList.add("todayCell"); // marca o dia de hoje
+
+  // troca a sigla do topo para "HOJE"
+  const wEl = cell.querySelector(".w");
+  if (wEl) wEl.textContent = "HOJE";
+
+  // (opcional) mantém o todayTag para desktop antigo, mas se você ocultou no CSS, pode remover.
   const t = document.createElement("div");
   t.className = "todayTag";
   t.textContent = "Hoje";
   cell.appendChild(t);
 }
+
 
             if (!past){
               cell.onclick = ()=>{
