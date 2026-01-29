@@ -508,15 +508,6 @@ if (c > 0){
 }
 
 
-
-            if (counts.get(iso)){
-              const b = document.createElement("div");
-              b.className = "badge";
-              const count = counts.get(iso);
-b.textContent = count > 9 ? "9+" : count;
-
-              cell.appendChild(b);
-            }
            if (iso === todayIso){
   cell.classList.add("todayCell");
 
@@ -543,8 +534,8 @@ b.textContent = count > 9 ? "9+" : count;
               };
             }
           } else {
-            cell.innerHTML = `<div class="n"> </div>`;
-          }
+  cell.innerHTML = `<div class="w"></div><div class="n"></div>`;
+}
 
           $("days").appendChild(cell);
         }
