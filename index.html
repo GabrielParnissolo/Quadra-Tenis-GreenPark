@@ -143,6 +143,7 @@
       align-items:center;
       justify-content:center;
       transition:transform .06s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
     }
     .day:hover:not(.off):not(.past){transform:translateY(-1px); border-color:#bbf7d0; background:#f0fdf4;}
     .day.off{background:#f3f4f6; color:#b3b3b3; cursor:default; opacity:.45;}
@@ -166,6 +167,128 @@
     .calCompact .day .n{font-size:18px;}
     .calCompact .days{gap:8px;}
     .calCompact .dow{font-size:11px;}
+
+    /* ===== AGENDA DO MÊS (estilo da imagem) ===== */
+    .agenda{
+      display:grid;
+      gap:14px;
+      margin-top:12px;
+    }
+    .agendaDay{
+      border:1px solid #eef2f7;
+      border-radius:14px;
+      overflow:hidden;
+      background:#fff;
+      box-shadow:0 1px 0 rgba(0,0,0,.02);
+    }
+    .agendaHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:12px 12px;
+      background:#f8fafc;
+      border-bottom:1px solid #eef2f7;
+      cursor:pointer;
+      user-select:none;
+    }
+    .agendaHeader.disabled{cursor:not-allowed; opacity:.6;}
+    .agendaHeaderLeft{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .agendaIcon{
+      width:34px; height:34px;
+      border-radius:10px;
+      display:grid; place-items:center;
+      background:#ecfdf3;
+      border:1px solid #bbf7d0;
+      color:#0b7a43;
+      font-weight:900;
+      flex:0 0 auto;
+    }
+    .agendaTitle{
+      font-weight:900;
+      font-size:13px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .agendaItems{
+      display:grid;
+      gap:10px;
+      padding:12px;
+    }
+    .agendaItem{
+      border:1px solid #e8eef7;
+      border-radius:14px;
+      padding:12px;
+      background:#fff;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .agendaItemLeft{
+      display:grid;
+      gap:6px;
+      min-width:0;
+    }
+    .agendaLine{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:#111827;
+      font-size:13px;
+      line-height:1.25;
+      min-width:0;
+    }
+    .agendaLine .ic{
+      width:16px;
+      opacity:.75;
+      flex:0 0 auto;
+    }
+    .agendaLine .txt{
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .agendaMeta{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex:0 0 auto;
+    }
+    .tag{
+      font-size:12px;
+      font-weight:800;
+      padding:6px 10px;
+      border-radius:10px;
+      border:1px solid #dbeafe;
+      background:#eff6ff;
+      color:#1d4ed8;
+      white-space:nowrap;
+    }
+    .tag.ranking{border-color:#fde68a; background:#fffbeb; color:#92400e;}
+    .tag.jogo{border-color:#c7d2fe; background:#eef2ff; color:#3730a3;}
+    .tag.treino{border-color:#bfdbfe; background:#eff6ff; color:#1d4ed8;}
+
+    .cancelMini{
+      border:1px solid #fecaca;
+      background:#fff5f5;
+      color:#991b1b;
+      font-weight:900;
+      border-radius:10px;
+      padding:6px 10px;
+      cursor:pointer;
+      font-size:12px;
+      line-height:1;
+      white-space:nowrap;
+    }
+    .cancelMini:hover{filter:brightness(.98); box-shadow:0 8px 18px rgba(0,0,0,.06);}
+    .cancelMini:active{transform:translateY(1px);}
 
     /* ===== HUD ===== */
     .hud{
@@ -233,7 +356,6 @@
       color:#b91c1c;
       cursor:not-allowed;
     }
-    /* “borda ocupada” mas clicável como fim (ex.: 16:00 quando existe 16:00–18:00) */
     .slot.busyEdge{
       background:rgba(239,68,68,.08);
       border-color:#ef4444;
@@ -318,19 +440,21 @@
           <div class="days" id="days"></div>
         </div>
 
-        <div class="muted" style="margin-top:10px;">Datas passadas ficam bloqueadas.</div>
+        <div class="muted" style="margin-top:10px;">
+          Selecione uma data aqui. Para <b>reservar</b>, use a aba <b>Reservar</b>.
+        </div>
       </div>
 
       <div class="card">
         <div class="row" style="justify-content:space-between; align-items:center;">
           <div>
             <b>Agenda do Mês</b><br>
-            <span class="muted">Clique em um dia para reservar</span>
+            <span class="muted">Clique em um dia para selecionar (não cria reserva nesta aba).</span>
           </div>
           <button class="btn small ghost" id="reloadMonth" type="button">Atualizar</button>
         </div>
 
-        <div id="weeks" style="margin-top:12px; display:grid; gap:10px;"></div>
+        <div id="weeks" class="agenda"></div>
       </div>
     </div>
 
@@ -504,11 +628,11 @@
       const s = loadStore(); s[resId] = token; saveStore(s);
     }
     function forgetToken(resId){
-  const s = loadStore(); delete s[resId]; saveStore(s);
-}
-function tokenFor(resId){
-  const s = loadStore(); return s[resId] || null;
-}
+      const s = loadStore(); delete s[resId]; saveStore(s);
+    }
+    function tokenFor(resId){
+      const s = loadStore(); return s[resId] || null;
+    }
 
     function showMyCancelLinks(){
       const s = loadStore();
@@ -554,6 +678,14 @@ function tokenFor(resId){
       $("hud-cal").onclick = ()=>setTab("cal");
       $("hud-res").onclick = ()=>setTab("res");
 
+      async function selectDate(dateStr){
+        selectedDate = dateStr;
+        pickStart = null; pickEnd = null;
+        renderAllCalendars();
+        renderWeeks();
+        await fetchDay(selectedDate);
+      }
+
       // ====== Data loading ======
       async function fetchMonth(){
         const y = current.getFullYear();
@@ -590,8 +722,8 @@ function tokenFor(resId){
         updateSummary();
       }
 
-      // ====== Calendar render (reutilizável para duas grades) ======
-      function renderMonthUI(targetMonthTitleId, targetDaysId){
+      // ====== Calendar render (duas grades) ======
+      function renderMonthUI(targetMonthTitleId, targetDaysId, mode){
         const y = current.getFullYear();
         const m = current.getMonth();
         $(targetMonthTitleId).textContent = monthLabel(y,m);
@@ -647,12 +779,14 @@ function tokenFor(resId){
 
             if (!past){
               cell.onclick = async ()=>{
-                selectedDate = iso;
-                pickStart = null; pickEnd = null;
-                renderAllCalendars();
-                renderWeeks();
-                await fetchDay(selectedDate);
-                setTab("res");
+                await selectDate(iso);
+                // IMPORTANTE:
+                // - mode "cal": NÃO muda de aba
+                // - mode "res": permanece em Reservar (não precisa chamar setTab)
+                if (mode === "res"){
+                  // garante que a pessoa está na aba correta se ela já estiver usando Reservar
+                  // (não faz nada se já estiver)
+                }
               };
             }
           } else {
@@ -664,147 +798,116 @@ function tokenFor(resId){
       }
 
       function renderAllCalendars(){
-        renderMonthUI("monthTitle", "days");
-        renderMonthUI("monthTitleRes", "daysRes");
+        renderMonthUI("monthTitle", "days", "cal");
+        renderMonthUI("monthTitleRes", "daysRes", "res");
       }
 
-      // ====== Agenda do mês (card list simples) ======
+      // ====== Agenda do mês (estilo da imagem + botão cancelar) ======
       function renderWeeks(){
         const container = $("weeks");
         container.innerHTML = "";
 
         const todayIso = toISODate(new Date());
-        const byWeek = new Map();
+
+        // agrupa por dia
+        const dayMap = new Map();
         for (const r of monthRows){
-          const d = new Date(r.data+"T00:00:00");
-          const wk = weekKey(d);
-          if (!byWeek.has(wk)) byWeek.set(wk, []);
-          byWeek.get(wk).push(r);
+          if (!dayMap.has(r.data)) dayMap.set(r.data, []);
+          dayMap.get(r.data).push(r);
         }
 
-        const weeks = [...byWeek.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+        const days = [...dayMap.entries()]
+          .sort((a,b)=>a[0].localeCompare(b[0]))
+          .filter(([dayIso]) => dayIso >= weekKey(new Date(todayIso+"T00:00:00"))); // mantém “a partir da semana atual”
 
-        const filtered = weeks.filter(([wk])=>{
-          return wk >= weekKey(new Date(todayIso+"T00:00:00"));
-        });
-
-        if (!filtered.length){
+        if (!days.length){
           container.innerHTML = `<div class="muted">Sem reservas neste período.</div>`;
           return;
         }
 
-        for (const [wk, items] of filtered){
-          const wkStart = new Date(wk+"T00:00:00");
-          const wkEnd = new Date(wkStart); wkEnd.setDate(wkEnd.getDate()+6);
-          const label = `${pad(wkStart.getDate())}/${pad(wkStart.getMonth()+1)} – ${pad(wkEnd.getDate())}/${pad(wkEnd.getMonth()+1)}`;
+        for (const [dayIso, dayItems] of days){
+          const dObj = new Date(dayIso+"T00:00:00");
+          const title = `${pad(dObj.getDate())}/${pad(dObj.getMonth()+1)} - ${weekdayLabel(dObj)}`;
+          const isPast = dayIso < todayIso;
 
-          const weekDiv = document.createElement("div");
-          weekDiv.className = "card";
-          weekDiv.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-              <b>Semana (${label})</b>
-              <span class="muted">${items.length} reserva(s)</span>
+          const dayCard = document.createElement("div");
+          dayCard.className = "agendaDay";
+
+          const header = document.createElement("div");
+          header.className = "agendaHeader" + (isPast ? " disabled" : "");
+          header.innerHTML = `
+            <div class="agendaHeaderLeft">
+              <div class="agendaIcon">📅</div>
+              <div class="agendaTitle">${title}</div>
             </div>
-            <div style="margin-top:10px; display:grid; gap:10px;" class="monthList"></div>
+            <div class="muted" style="font-size:12px; font-weight:800;">${dayItems.length} reserva(s)</div>
           `;
 
-          const list = weekDiv.querySelector(".monthList");
-
-          const dayMap = new Map();
-          for (const r of items){
-            if (!dayMap.has(r.data)) dayMap.set(r.data, []);
-            dayMap.get(r.data).push(r);
+          if (!isPast){
+            header.onclick = async ()=>{
+              await selectDate(dayIso); // só seleciona; NÃO abre Reservar
+            };
           }
-          const days = [...dayMap.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
 
-          for (const [dayIso, dayItems] of days){
-            const dObj = new Date(dayIso+"T00:00:00");
-            const title = `${pad(dObj.getDate())}/${pad(dObj.getMonth()+1)} - ${weekdayLabel(dObj)}`;
+          const itemsBox = document.createElement("div");
+          itemsBox.className = "agendaItems";
 
-            const block = document.createElement("div");
-            block.className = "card";
-            block.style.borderColor = (dayIso===selectedDate) ? "#0ea75a" : "var(--b)";
-            block.style.background = (dayIso===selectedDate) ? "#ecfdf3" : "#fff";
-            block.style.cursor = (dayIso < todayIso) ? "not-allowed" : "pointer";
-            block.innerHTML = `
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div><b>${title}</b></div>
-                <div class="muted">${dayItems.length} reserva(s)</div>
+          // ordena por hora
+          dayItems.sort((a,b)=> (a.horario_inicio||"").localeCompare(b.horario_inicio||""));
+
+          for (const r of dayItems){
+            const h1 = (r.horario_inicio||"").slice(0,5);
+            const h2 = (r.horario_fim||"").slice(0,5);
+            const players = [r.jogador1, r.jogador2].filter(Boolean).join(" vs ");
+            const ql = `Quadra ${r.quadra || "-"}, Lote ${r.lote ?? "-"}`;
+
+            const tipo = (r.tipo||"treino").toLowerCase();
+            const tagClass = (tipo === "ranking") ? "ranking" : (tipo === "jogo" ? "jogo" : "treino");
+            const tagLabel = (tipo === "ranking") ? "Ranking" : (tipo === "jogo" ? "Jogo" : "Treino");
+
+            const canCancel = !!tokenFor(r.id);
+
+            const item = document.createElement("div");
+            item.className = "agendaItem";
+            item.innerHTML = `
+              <div class="agendaItemLeft">
+                <div class="agendaLine">
+                  <span class="ic">🕒</span>
+                  <span class="txt" style="font-weight:900;">${h1}-${h2}</span>
+                </div>
+                <div class="agendaLine">
+                  <span class="ic">👤</span>
+                  <span class="txt">${players || "-"}</span>
+                </div>
+                <div class="agendaLine">
+                  <span class="ic">📍</span>
+                  <span class="txt">${ql}</span>
+                </div>
               </div>
-              <div style="margin-top:8px; display:grid; gap:8px;">
-                ${dayItems.map(r=>{
-                  const h1 = (r.horario_inicio||"").slice(0,5);
-                  const h2 = (r.horario_fim||"").slice(0,5);
-                  const players = [r.jogador1, r.jogador2].filter(Boolean).join(" vs ");
-                  const ql = `📍 Quadra ${r.quadra || "-"}, Lote ${r.lote ?? "-"}`;
-                  const canCancel = !!tokenFor(r.id);
 
-                  block.querySelectorAll(".cancelMine").forEach(btn=>{
-  btn.onclick = async (ev)=>{
-    ev.stopPropagation(); // não abre o dia ao cancelar
-    const resId = btn.getAttribute("data-resid");
-    await cancelMyReservationById(resId);
-  };
-});
-
-// depois disso continua normal
-if (dayIso >= todayIso){
-  block.onclick = async (ev)=>{
-    // se clicou no botão "Cancelar" (ou dentro dele), não abre a aba Reservar
-    if (ev.target.closest(".cancelMine")) return;
-
-    selectedDate = dayIso;
-    pickStart = null; pickEnd = null;
-    renderAllCalendars();
-    await fetchDay(selectedDate);
-    setTab("res");
-  };
-}
-
-
-list.appendChild(block);
-
-return `
-  <div style="border:1px solid #eef2ff; border-radius:12px; padding:10px;">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-      <div>
-        <b>🕒 ${h1}-${h2}</b> <span class="muted">(${r.tipo})</span><br/>
-        <span class="muted">👤 ${players || "-"}</span><br/>
-        <span class="muted">${ql}</span>
-      </div>
-
-      ${canCancel ? `
-        <button
-          type="button"
-          class="btn small ghost cancelMine"
-          data-resid="${r.id}"
-          style="border-color:#fecaca; color:#991b1b; background:#fff5f5;"
-        >
-          Cancelar
-        </button>
-      ` : ``}
-    </div>
-  </div>
-`;
-
-                }).join("")}
+              <div class="agendaMeta">
+                <span class="tag ${tagClass}">${tagLabel}</span>
+                ${canCancel ? `<button type="button" class="cancelMini" data-resid="${r.id}">Cancelar</button>` : ``}
               </div>
             `;
 
-            if (dayIso >= todayIso){
-              block.onclick = async ()=>{
-                selectedDate = dayIso;
-                pickStart = null; pickEnd = null;
-                renderAllCalendars();
-                await fetchDay(selectedDate);
-                setTab("res");
+            // botão cancelar
+            const btn = item.querySelector(".cancelMini");
+            if (btn){
+              btn.onclick = async (ev)=>{
+                ev.preventDefault();
+                ev.stopPropagation();
+                const resId = btn.getAttribute("data-resid");
+                await cancelMyReservationById(resId);
               };
             }
 
-            list.appendChild(block);
+            itemsBox.appendChild(item);
           }
 
-          container.appendChild(weekDiv);
+          dayCard.appendChild(header);
+          dayCard.appendChild(itemsBox);
+          container.appendChild(dayCard);
         }
       }
 
@@ -847,31 +950,24 @@ return `
         for (let t=openMin; t<=closeMin; t+=STEP_MIN){
           const isPastTime = (selectedDate === todayIso) && (t < minStartToday);
 
-          // visual “ocupado” (qualquer ponto dentro de [s,e))
           const inBusy = busy.some(x => t >= x.s && t < x.e);
           const atBusyStart = busy.some(x => t === x.s);
 
-          // bloqueio:
-          // - escolhendo início: bloqueia tudo que está em [s,e)
-          // - escolhendo fim: bloqueia só o miolo (t > s && t < e) (permite borda t==s)
           const busyForDisable = choosingEnd
-            ? busy.some(x => t > x.s && t < x.e)
-            : inBusy;
+            ? busy.some(x => t > x.s && t < x.e) // bloqueia miolo
+            : inBusy; // bloqueia tudo no início
 
           const btn = document.createElement("button");
           btn.type = "button";
           btn.textContent = minToHHMM(t);
 
-          // classes base
           btn.className = "slot" + (inBusy ? " busy" : "") + (isPastTime ? " out" : "");
 
-          // se for “borda ocupada” e estamos escolhendo fim, deixa com estilo especial (clicável)
           if (choosingEnd && atBusyStart && !isPastTime){
             btn.classList.remove("busy");
             btn.classList.add("busyEdge");
           }
 
-          // seleção visual
           if (pickStart != null && pickEnd == null){
             if (t === pickStart) btn.classList.add("selected","edge");
           }
@@ -887,7 +983,6 @@ return `
 
           if (!disabled){
             btn.onclick = ()=>{
-              // clique 1: define início (ou recomeça)
               if (pickStart == null || (pickStart != null && pickEnd != null)){
                 pickStart = t;
                 pickEnd = null;
@@ -896,7 +991,6 @@ return `
                 return;
               }
 
-              // clique 2: define fim
               if (pickStart != null && pickEnd == null){
                 if (t === pickStart){
                   pickStart = null; pickEnd = null;
@@ -989,31 +1083,31 @@ return `
       }
 
       async function cancelMyReservationById(resId){
-  const token = tokenFor(resId);
-  if (!token){
-    alert("Este aparelho não tem o token dessa reserva. (Somente o dono consegue cancelar aqui.)");
-    return;
-  }
+        const token = tokenFor(resId);
+        if (!token){
+          alert("Este aparelho não tem o token dessa reserva. (Somente o dono consegue cancelar aqui.)");
+          return;
+        }
 
-  if (!confirm("Tem certeza que deseja cancelar esta reserva?")) return;
+        if (!confirm("Tem certeza que deseja cancelar esta reserva?")) return;
 
-  const { data, error } = await supabase.rpc("cancel_reserva", { p_token: token });
-  if (error){
-    alert("Erro ao cancelar: " + error.message);
-    return;
-  }
+        const { data, error } = await supabase.rpc("cancel_reserva", { p_token: token });
+        if (error){
+          alert("Erro ao cancelar: " + error.message);
+          return;
+        }
 
-  if (!data){
-    alert("Token inválido ou reserva já cancelada.");
-    return;
-  }
+        if (!data){
+          alert("Token inválido ou reserva já cancelada.");
+          return;
+        }
 
-  forgetToken(resId);
+        forgetToken(resId);
 
-  alert("Reserva cancelada!");
-  await fetchMonth();
-  await fetchDay(selectedDate);
-}
+        alert("Reserva cancelada!");
+        await fetchMonth();
+        await fetchDay(selectedDate);
+      }
 
       async function handleCancelFromUrl(){
         const url = new URL(window.location.href);
@@ -1120,7 +1214,7 @@ return `
         pickStart=null; pickEnd=null;
         await fetchMonth();
         await fetchDay(selectedDate);
-        setTab("cal");
+        // fica onde o usuário estiver (não força aba)
       }
 
       // ====== Bind events ======
