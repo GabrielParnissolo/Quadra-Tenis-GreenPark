@@ -98,6 +98,7 @@
       border-radius:12px;
       cursor:pointer;
       transition:transform .05s ease, box-shadow .15s ease, background .15s ease;
+      user-select:none;
     }
     .btn:hover{box-shadow:0 8px 18px rgba(0,0,0,.06);}
     .btn:active{transform:translateY(1px);}
@@ -105,6 +106,14 @@
     .btn.ghost{background:#f7f7f7;}
     .btn.small{padding:7px 10px; border-radius:10px; font-size:13px;}
     .btn:disabled{opacity:.45; cursor:not-allowed; box-shadow:none; transform:none;}
+
+    .btn.top{
+      background:rgba(255,255,255,.18);
+      border-color:rgba(255,255,255,.28);
+      color:#fff;
+    }
+    .btn.top:hover{background:rgba(255,255,255,.22); box-shadow:0 10px 22px rgba(0,0,0,.14);}
+
     input, select{
       border:1px solid var(--b);
       border-radius:12px;
@@ -122,6 +131,15 @@
     .grid{display:grid; gap:10px;}
     .two{grid-template-columns: 1fr 1fr;}
     @media(max-width:900px){ .two{grid-template-columns:1fr;} }
+
+    /* ===== LOGIN ===== */
+    .authWrap{max-width:540px; margin:18px auto;}
+    .authTitle{font-weight:1000; font-size:18px; margin:0 0 6px;}
+    .authDesc{margin:0 0 14px; color:var(--muted); font-size:13px; line-height:1.35;}
+    .authGrid{display:grid; gap:10px;}
+    .authActions{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:4px;}
+    .authWarn{background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; padding:10px 12px; border-radius:14px; font-size:13px; line-height:1.35;}
+    .hide{display:none !important;}
 
     /* ===== CALENDÁRIO ===== */
     .monthHeader{display:flex; align-items:center; justify-content:space-between; gap:10px;}
@@ -263,7 +281,7 @@
     }
     .tag{
       font-size:12px;
-      font-weight:800;
+      font-weight:900;
       padding:6px 10px;
       border-radius:10px;
       border:1px solid #dbeafe;
@@ -279,7 +297,7 @@
       border:1px solid #fecaca;
       background:#fff5f5;
       color:#991b1b;
-      font-weight:900;
+      font-weight:1000;
       border-radius:10px;
       padding:6px 10px;
       cursor:pointer;
@@ -415,142 +433,184 @@
 
 <body>
   <div class="topbar">
-    <div class="title">
-      🎾 Quadra de Tênis
-      <span id="jsStatus" style="font-size:12px; opacity:.9;">(JS: 🔴)</span>
+    <div class="row" style="justify-content:space-between; align-items:center;">
+      <div>
+        <div class="title">
+          🎾 Quadra de Tênis
+          <span id="jsStatus" style="font-size:12px; opacity:.9;">(JS: 🔴)</span>
+        </div>
+        <div class="subtitle">Green Park</div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span id="userLabel" style="font-size:12px; font-weight:900; opacity:.95;"></span>
+        <button class="btn small top" id="signOutBtn" type="button" style="display:none;">Sair</button>
+      </div>
     </div>
-    <div class="subtitle">Green Park</div>
   </div>
 
   <div class="wrap">
 
-    <!-- CALENDÁRIO -->
-    <div id="view-cal" class="grid two">
+    <!-- LOGIN / CADASTRO -->
+    <div id="view-auth" class="authWrap">
       <div class="card">
-        <div class="monthHeader">
-          <button class="btn small" id="prevMonth" type="button">◀</button>
-          <div class="monthTitle" id="monthTitle">mês</div>
-          <button class="btn small" id="nextMonth" type="button">▶</button>
+        <h2 class="authTitle">Entrar</h2>
+        <p class="authDesc">
+          Use seu <b>telefone</b> e uma <b>senha</b>. No primeiro acesso, clique em <b>Criar conta</b>.
+        </p>
+
+        <div class="authWarn" style="margin-bottom:12px;">
+          Dica: digite só números (com DDD). Ex: <b>11999998888</b>
         </div>
 
-        <div class="cal">
-          <div class="dow">
-            <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div>
-          </div>
-          <div class="days" id="days"></div>
-        </div>
-
-        <div class="muted" style="margin-top:10px;">
-          Selecione uma data aqui. Para <b>reservar</b>, use a aba <b>Reservar</b>.
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="row" style="justify-content:space-between; align-items:center;">
+        <div class="authGrid">
           <div>
-            <b>Agenda do Mês</b><br>
-            <span class="muted">Clique em um dia para selecionar (não cria reserva nesta aba).</span>
+            <div class="muted" style="font-size:12px; font-weight:900; margin:0 0 6px;">Telefone</div>
+            <input id="authPhone" placeholder="Ex: 11999998888" inputmode="tel" />
           </div>
-          <button class="btn small ghost" id="reloadMonth" type="button">Atualizar</button>
+          <div>
+            <div class="muted" style="font-size:12px; font-weight:900; margin:0 0 6px;">Senha</div>
+            <input id="authPass" type="password" placeholder="Crie uma senha" />
+          </div>
+          <div class="authActions">
+            <button class="btn ghost" id="btnSignUp" type="button">Criar conta</button>
+            <button class="btn primary" id="btnSignIn" type="button">Entrar</button>
+          </div>
+          <div id="authMsg" class="muted" style="font-size:13px;"></div>
         </div>
-
-        <div id="weeks" class="agenda"></div>
       </div>
     </div>
 
-    <!-- RESERVAR -->
-    <div id="view-res" class="grid two" style="display:none;">
-      <!-- ESQUERDA: calendário + horários -->
-      <div class="grid" style="gap:10px;">
-        <div class="card calCompact">
-          <div class="sectionTitle">
-            <b>📅 Selecione o dia</b>
-            <span class="pill">toque no dia</span>
-          </div>
+    <!-- APP (oculto até logar) -->
+    <div id="view-app" class="hide">
 
-          <div class="monthHeader" style="margin-top:10px;">
-            <button class="btn small" id="prevMonthRes" type="button">◀</button>
-            <div class="monthTitle" id="monthTitleRes">mês</div>
-            <button class="btn small" id="nextMonthRes" type="button">▶</button>
+      <!-- CALENDÁRIO -->
+      <div id="view-cal" class="grid two">
+        <div class="card">
+          <div class="monthHeader">
+            <button class="btn small" id="prevMonth" type="button">◀</button>
+            <div class="monthTitle" id="monthTitle">mês</div>
+            <button class="btn small" id="nextMonth" type="button">▶</button>
           </div>
 
           <div class="cal">
             <div class="dow">
               <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div>
             </div>
-            <div class="days" id="daysRes"></div>
+            <div class="days" id="days"></div>
           </div>
 
-          <div class="muted" style="margin-top:8px;">Vermelho no dia = já existe reserva.</div>
+          <div class="muted" style="margin-top:10px;">
+            Selecione uma data aqui. Para <b>reservar</b>, use a aba <b>Reservar</b>.
+          </div>
         </div>
 
         <div class="card">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <div>
+              <b>Agenda do Mês</b><br>
+              <span class="muted">Clique em um dia para selecionar (não cria reserva nesta aba).</span>
+            </div>
+            <button class="btn small ghost" id="reloadMonth" type="button">Atualizar</button>
+          </div>
+
+          <div id="weeks" class="agenda"></div>
+        </div>
+      </div>
+
+      <!-- RESERVAR -->
+      <div id="view-res" class="grid two" style="display:none;">
+        <!-- ESQUERDA: calendário + horários -->
+        <div class="grid" style="gap:10px;">
+          <div class="card calCompact">
+            <div class="sectionTitle">
+              <b>📅 Selecione o dia</b>
+              <span class="pill">toque no dia</span>
+            </div>
+
+            <div class="monthHeader" style="margin-top:10px;">
+              <button class="btn small" id="prevMonthRes" type="button">◀</button>
+              <div class="monthTitle" id="monthTitleRes">mês</div>
+              <button class="btn small" id="nextMonthRes" type="button">▶</button>
+            </div>
+
+            <div class="cal">
+              <div class="dow">
+                <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div>
+              </div>
+              <div class="days" id="daysRes"></div>
+            </div>
+
+            <div class="muted" style="margin-top:8px;">Vermelho no dia = já existe reserva.</div>
+          </div>
+
+          <div class="card">
+            <div class="sectionTitle">
+              <b>⏱️ Horários disponíveis</b>
+              <span class="pill">máx. 2h</span>
+            </div>
+
+            <div class="muted" style="margin-top:6px;">
+              Clique no <b>horário inicial</b> e depois no <b>horário final</b>. Vermelho = ocupado.
+            </div>
+
+            <div class="summaryBox" id="dayInfo" style="display:none;"></div>
+            <div class="slots" id="slots"></div>
+          </div>
+        </div>
+
+        <!-- DIREITA: dados + resumo -->
+        <div class="card">
           <div class="sectionTitle">
-            <b>⏱️ Horários disponíveis</b>
-            <span class="pill">máx. 2h</span>
+            <b>🧾 Dados da Reserva</b>
+            <span class="pill">preencha e confirme</span>
           </div>
 
-          <div class="muted" style="margin-top:6px;">
-            Clique no <b>horário inicial</b> e depois no <b>horário final</b>. Vermelho = ocupado.
+          <div class="formGrid">
+            <div class="field">
+              <label>🏁 Tipo de Jogo</label>
+              <select id="tipo">
+                <option value="treino" selected>Treino</option>
+                <option value="ranking">Ranking</option>
+                <option value="jogo">Jogo</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>👤 Jogador 1</label>
+              <input id="j1" placeholder="Nome do primeiro jogador" />
+            </div>
+
+            <div class="field">
+              <label>👥 Jogador 2 (opcional)</label>
+              <input id="j2" placeholder="Nome do segundo jogador (opcional)" />
+            </div>
+
+            <div class="field">
+              <label>📍 Quadra</label>
+              <input id="quadra" placeholder="Ex: Q, M, A1" />
+            </div>
+
+            <div class="field">
+              <label>🏠 Lote</label>
+              <input id="lote" placeholder="Ex: 10" inputmode="numeric" />
+            </div>
           </div>
 
-          <div class="summaryBox" id="dayInfo" style="display:none;"></div>
-          <div class="slots" id="slots"></div>
+          <div class="summaryBox" id="summary" style="display:none;"></div>
+
+          <div class="confirmBar">
+            <button class="btn primary" id="confirm" type="button">Confirmar Reserva</button>
+          </div>
+
+          <div class="muted" style="margin-top:10px;">
+            Cancelamento: somente <b>logado</b>, e apenas o <b>dono</b> da reserva.
+          </div>
         </div>
       </div>
 
-      <!-- DIREITA: dados + resumo -->
-      <div class="card">
-        <div class="sectionTitle">
-          <b>🧾 Dados da Reserva</b>
-          <span class="pill">preencha e confirme</span>
-        </div>
-
-        <div class="formGrid">
-          <div class="field">
-            <label>🏁 Tipo de Jogo</label>
-            <select id="tipo">
-              <option value="treino" selected>Treino</option>
-              <option value="ranking">Ranking</option>
-              <option value="jogo">Jogo</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label>👤 Jogador 1</label>
-            <input id="j1" placeholder="Nome do primeiro jogador" />
-          </div>
-
-          <div class="field">
-            <label>👥 Jogador 2 (opcional)</label>
-            <input id="j2" placeholder="Nome do segundo jogador (opcional)" />
-          </div>
-
-          <div class="field">
-            <label>📍 Quadra</label>
-            <input id="quadra" placeholder="Ex: Q, M, A1" />
-          </div>
-
-          <div class="field">
-            <label>🏠 Lote</label>
-            <input id="lote" placeholder="Ex: 10" inputmode="numeric" />
-          </div>
-        </div>
-
-        <div class="summaryBox" id="summary" style="display:none;"></div>
-
-        <div class="confirmBar">
-          <button class="btn ghost" id="showMyLinks" type="button">Meus links de cancelamento</button>
-          <button class="btn primary" id="confirm" type="button">Confirmar Reserva</button>
-        </div>
-
-        <div class="muted" style="margin-top:10px;">
-          Cancelamento: você receberá um link/token para cancelar depois.
-        </div>
-      </div>
+      <div class="spacer"></div>
     </div>
-
-    <div class="spacer"></div>
   </div>
 
   <!-- HUD -->
@@ -617,33 +677,18 @@
       return Math.ceil(minutes / step) * step;
     }
 
-    // ====== STORAGE: tokens no aparelho ======
-    const STORE_KEY = "my_reservation_tokens_v1";
-    function loadStore(){
-      try { return JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); }
-      catch { return {}; }
+    // telefone -> "email fake" (login telefone+senha sem SMS)
+    function normalizePhone(raw){
+      const digits = String(raw||"").replace(/\D/g,"");
+      if (!digits) return "";
+      // se usuário digitar 11 dígitos (DDD + número) assume Brasil e prefixa 55
+      if (digits.length === 11) return "55" + digits;
+      // se já tiver 12/13 com 55, mantém
+      if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) return digits;
+      return digits; // fallback
     }
-    function saveStore(obj){ localStorage.setItem(STORE_KEY, JSON.stringify(obj)); }
-    function rememberToken(resId, token){
-      const s = loadStore(); s[resId] = token; saveStore(s);
-    }
-    function forgetToken(resId){
-      const s = loadStore(); delete s[resId]; saveStore(s);
-    }
-    function tokenFor(resId){
-      const s = loadStore(); return s[resId] || null;
-    }
-
-    function showMyCancelLinks(){
-      const s = loadStore();
-      const ids = Object.keys(s);
-      if (!ids.length){
-        alert("Nenhum link salvo neste aparelho ainda.");
-        return;
-      }
-      const base = window.location.origin + window.location.pathname;
-      const lines = ids.map(id => `${base}?cancel=${s[id]}`);
-      alert("Links salvos neste aparelho:\n\n" + lines.join("\n\n"));
+    function phoneToEmail(phoneDigits){
+      return `${phoneDigits}@greenpark.local`;
     }
 
     // ====== APP ======
@@ -662,9 +707,37 @@
       let monthRows = [];
       let dayRows = [];
 
-      // seleção por dois cliques (bordas)
       let pickStart = null; // minutos
       let pickEnd = null;   // minutos (fim / borda)
+
+      let currentUser = null; // session.user
+
+      // ====== UI Auth gates ======
+      function setAuthedUI(isAuthed){
+        $("view-auth").classList.toggle("hide", isAuthed);
+        $("view-app").classList.toggle("hide", !isAuthed);
+        $("hud").style.display = isAuthed ? "" : "none";
+        $("signOutBtn").style.display = isAuthed ? "" : "none";
+      }
+
+      function setAuthMessage(msg){
+        $("authMsg").textContent = msg || "";
+      }
+
+      async function refreshSession(){
+        const { data } = await supabase.auth.getSession();
+        currentUser = data?.session?.user || null;
+
+        if (currentUser){
+          const phone = currentUser.user_metadata?.phone || "";
+          $("userLabel").textContent = phone ? `📱 ${phone}` : "Logado";
+          setAuthedUI(true);
+        } else {
+          $("userLabel").textContent = "";
+          setAuthedUI(false);
+        }
+        return !!currentUser;
+      }
 
       // ====== HUD ======
       function setTab(which){
@@ -678,16 +751,76 @@
       $("hud-cal").onclick = ()=>setTab("cal");
       $("hud-res").onclick = ()=>setTab("res");
 
-      async function selectDate(dateStr){
-        selectedDate = dateStr;
-        pickStart = null; pickEnd = null;
-        renderAllCalendars();
-        renderWeeks();
-        await fetchDay(selectedDate);
+      // ====== Auth actions ======
+      async function signIn(){
+        const phoneNorm = normalizePhone($("authPhone").value);
+        const pass = $("authPass").value;
+
+        if (!phoneNorm) return setAuthMessage("Digite seu telefone.");
+        if (!pass || pass.length < 6) return setAuthMessage("Digite uma senha (mínimo 6 caracteres).");
+
+        setAuthMessage("Entrando...");
+        const email = phoneToEmail(phoneNorm);
+
+        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        if (error){
+          setAuthMessage("Não deu para entrar: " + error.message);
+          return;
+        }
+
+        setAuthMessage("");
+        await refreshSession();
+        await initAfterLogin();
       }
+
+      async function signUp(){
+        const phoneNorm = normalizePhone($("authPhone").value);
+        const pass = $("authPass").value;
+
+        if (!phoneNorm) return setAuthMessage("Digite seu telefone.");
+        if (!pass || pass.length < 6) return setAuthMessage("Crie uma senha (mínimo 6 caracteres).");
+
+        setAuthMessage("Criando conta...");
+        const email = phoneToEmail(phoneNorm);
+
+        const { error } = await supabase.auth.signUp({
+          email,
+          password: pass,
+          options: { data: { phone: phoneNorm } }
+        });
+
+        if (error){
+          setAuthMessage("Não deu para criar conta: " + error.message);
+          return;
+        }
+
+        setAuthMessage("Conta criada! Agora clique em Entrar.");
+      }
+
+      $("btnSignIn").onclick = ()=>signIn();
+      $("btnSignUp").onclick = ()=>signUp();
+      $("signOutBtn").onclick = async ()=>{
+        await supabase.auth.signOut();
+        currentUser = null;
+        monthRows = []; dayRows = [];
+        $("weeks").innerHTML = "";
+        $("slots").innerHTML = "";
+        $("summary").style.display = "none";
+        $("dayInfo").style.display = "none";
+        setTab("cal");
+        await refreshSession();
+      };
+
+      // Reage a login/logout
+      supabase.auth.onAuthStateChange(async (_event, session)=>{
+        currentUser = session?.user || null;
+        await refreshSession();
+      });
 
       // ====== Data loading ======
       async function fetchMonth(){
+        if (!currentUser) return;
+
         const y = current.getFullYear();
         const m = current.getMonth()+1;
         const start = `${y}-${pad(m)}-01`;
@@ -695,7 +828,7 @@
 
         const { data, error } = await supabase
           .from("reservas")
-          .select("id,data,horario_inicio,horario_fim,jogador1,jogador2,tipo,quadra,lote,canceled_at")
+          .select("id,owner_id,data,horario_inicio,horario_fim,jogador1,jogador2,tipo,quadra,lote,canceled_at")
           .is("canceled_at", null)
           .gte("data", start)
           .lte("data", end)
@@ -709,9 +842,11 @@
       }
 
       async function fetchDay(dateStr){
+        if (!currentUser) return;
+
         const { data, error } = await supabase
           .from("reservas")
-          .select("id,data,horario_inicio,horario_fim,jogador1,jogador2,tipo,quadra,lote,canceled_at")
+          .select("id,owner_id,data,horario_inicio,horario_fim,jogador1,jogador2,tipo,quadra,lote,canceled_at")
           .is("canceled_at", null)
           .eq("data", dateStr)
           .order("horario_inicio",{ascending:true});
@@ -722,8 +857,16 @@
         updateSummary();
       }
 
+      async function selectDate(dateStr){
+        selectedDate = dateStr;
+        pickStart = null; pickEnd = null;
+        renderAllCalendars();
+        renderWeeks();
+        await fetchDay(selectedDate);
+      }
+
       // ====== Calendar render (duas grades) ======
-      function renderMonthUI(targetMonthTitleId, targetDaysId, mode){
+      function renderMonthUI(targetMonthTitleId, targetDaysId){
         const y = current.getFullYear();
         const m = current.getMonth();
         $(targetMonthTitleId).textContent = monthLabel(y,m);
@@ -780,13 +923,7 @@
             if (!past){
               cell.onclick = async ()=>{
                 await selectDate(iso);
-                // IMPORTANTE:
-                // - mode "cal": NÃO muda de aba
-                // - mode "res": permanece em Reservar (não precisa chamar setTab)
-                if (mode === "res"){
-                  // garante que a pessoa está na aba correta se ela já estiver usando Reservar
-                  // (não faz nada se já estiver)
-                }
+                // IMPORTANT: NUNCA troca de aba ao clicar no calendário
               };
             }
           } else {
@@ -798,18 +935,18 @@
       }
 
       function renderAllCalendars(){
-        renderMonthUI("monthTitle", "days", "cal");
-        renderMonthUI("monthTitleRes", "daysRes", "res");
+        renderMonthUI("monthTitle", "days");
+        renderMonthUI("monthTitleRes", "daysRes");
       }
 
       // ====== Agenda do mês (estilo da imagem + botão cancelar) ======
       function renderWeeks(){
         const container = $("weeks");
         container.innerHTML = "";
+        if (!currentUser) return;
 
         const todayIso = toISODate(new Date());
 
-        // agrupa por dia
         const dayMap = new Map();
         for (const r of monthRows){
           if (!dayMap.has(r.data)) dayMap.set(r.data, []);
@@ -818,7 +955,7 @@
 
         const days = [...dayMap.entries()]
           .sort((a,b)=>a[0].localeCompare(b[0]))
-          .filter(([dayIso]) => dayIso >= weekKey(new Date(todayIso+"T00:00:00"))); // mantém “a partir da semana atual”
+          .filter(([dayIso]) => dayIso >= weekKey(new Date(todayIso+"T00:00:00"))); // a partir da semana atual
 
         if (!days.length){
           container.innerHTML = `<div class="muted">Sem reservas neste período.</div>`;
@@ -840,19 +977,16 @@
               <div class="agendaIcon">📅</div>
               <div class="agendaTitle">${title}</div>
             </div>
-            <div class="muted" style="font-size:12px; font-weight:800;">${dayItems.length} reserva(s)</div>
+            <div class="muted" style="font-size:12px; font-weight:900;">${dayItems.length} reserva(s)</div>
           `;
 
           if (!isPast){
-            header.onclick = async ()=>{
-              await selectDate(dayIso); // só seleciona; NÃO abre Reservar
-            };
+            header.onclick = async ()=>{ await selectDate(dayIso); };
           }
 
           const itemsBox = document.createElement("div");
           itemsBox.className = "agendaItems";
 
-          // ordena por hora
           dayItems.sort((a,b)=> (a.horario_inicio||"").localeCompare(b.horario_inicio||""));
 
           for (const r of dayItems){
@@ -865,7 +999,7 @@
             const tagClass = (tipo === "ranking") ? "ranking" : (tipo === "jogo" ? "jogo" : "treino");
             const tagLabel = (tipo === "ranking") ? "Ranking" : (tipo === "jogo" ? "Jogo" : "Treino");
 
-            const canCancel = !!tokenFor(r.id);
+            const canCancel = (r.owner_id && currentUser && r.owner_id === currentUser.id);
 
             const item = document.createElement("div");
             item.className = "agendaItem";
@@ -891,7 +1025,6 @@
               </div>
             `;
 
-            // botão cancelar
             const btn = item.querySelector(".cancelMini");
             if (btn){
               btn.onclick = async (ev)=>{
@@ -931,7 +1064,6 @@
           minStartToday = Math.max(openMin, roundUpToStep(nowMin, STEP_MIN));
         }
 
-        // topo info
         const d = new Date(selectedDate+"T00:00:00");
         $("dayInfo").style.display = "";
         $("dayInfo").innerHTML = `
@@ -955,7 +1087,7 @@
 
           const busyForDisable = choosingEnd
             ? busy.some(x => t > x.s && t < x.e) // bloqueia miolo
-            : inBusy; // bloqueia tudo no início
+            : inBusy;
 
           const btn = document.createElement("button");
           btn.type = "button";
@@ -1072,63 +1204,29 @@
         `;
       }
 
-      // ====== Cancelamento ======
-      async function cancelByToken(token){
-        const { data, error } = await supabase.rpc("cancel_reserva", { p_token: token });
-        if (error){
-          alert("Erro ao cancelar: " + error.message);
-          return false;
-        }
-        return !!data;
-      }
-
+      // ====== Cancelamento (somente dono logado) ======
       async function cancelMyReservationById(resId){
-        const token = tokenFor(resId);
-        if (!token){
-          alert("Este aparelho não tem o token dessa reserva. (Somente o dono consegue cancelar aqui.)");
-          return;
-        }
-
+        if (!currentUser) return alert("Faça login para cancelar.");
         if (!confirm("Tem certeza que deseja cancelar esta reserva?")) return;
 
-        const { data, error } = await supabase.rpc("cancel_reserva", { p_token: token });
+        const { data, error } = await supabase.rpc("cancel_my_reserva", { p_id: resId });
         if (error){
           alert("Erro ao cancelar: " + error.message);
           return;
         }
-
         if (!data){
-          alert("Token inválido ou reserva já cancelada.");
+          alert("Não foi possível cancelar (talvez não seja sua reserva, ou já foi cancelada).");
           return;
         }
-
-        forgetToken(resId);
 
         alert("Reserva cancelada!");
         await fetchMonth();
         await fetchDay(selectedDate);
       }
 
-      async function handleCancelFromUrl(){
-        const url = new URL(window.location.href);
-        const token = url.searchParams.get("cancel");
-        if (!token) return;
-
-        if (!confirm("Cancelar a reserva vinculada a este link?")) return;
-
-        const ok = await cancelByToken(token);
-        if (ok) alert("Reserva cancelada!");
-        else alert("Token inválido ou reserva já cancelada.");
-
-        url.searchParams.delete("cancel");
-        history.replaceState({}, "", url.toString());
-
-        await fetchMonth();
-        await fetchDay(selectedDate);
-      }
-
       // ====== Confirm ======
       async function confirmReservation(){
+        if (!currentUser) return alert("Faça login para reservar.");
         if (isPastDate(selectedDate)) return alert("Não é possível reservar em datas passadas.");
 
         const j1 = $("j1").value.trim();
@@ -1174,14 +1272,13 @@
           tipo,
           quadra,
           lote,
-          criador_id: "anon"
+          owner_id: currentUser.id, // RLS valida
+          criador_id: currentUser.user_metadata?.phone || null
         };
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("reservas")
-          .insert([payload])
-          .select("id,cancel_token")
-          .single();
+          .insert([payload]);
 
         if (error){
           const msg = (error.message||"").toLowerCase();
@@ -1200,21 +1297,11 @@
           return alert("Não deu para reservar: " + error.message);
         }
 
-        rememberToken(data.id, data.cancel_token);
-
-        const base = window.location.origin + window.location.pathname;
-        const cancelLink = `${base}?cancel=${data.cancel_token}`;
-
-        alert(
-          "Reserva criada!\n\n" +
-          "Guarde este link para cancelar a sua reserva a qualquer momento:\n\n" +
-          cancelLink
-        );
+        alert("Reserva criada!");
 
         pickStart=null; pickEnd=null;
         await fetchMonth();
         await fetchDay(selectedDate);
-        // fica onde o usuário estiver (não força aba)
       }
 
       // ====== Bind events ======
@@ -1236,16 +1323,27 @@
       $("lote").oninput = updateSummary;
 
       $("confirm").onclick = ()=>confirmReservation();
-      $("showMyLinks").onclick = ()=>showMyCancelLinks();
+
+      // ====== Init after login ======
+      async function initAfterLogin(){
+        if (!currentUser) return;
+        current = new Date(); current.setDate(1);
+        selectedDate = toISODate(new Date());
+        pickStart = null; pickEnd = null;
+
+        setTab("cal");
+        renderAllCalendars();
+        await fetchMonth();
+        await fetchDay(selectedDate);
+      }
 
       // ====== Boot ======
-      current = new Date(); current.setDate(1);
-      selectedDate = toISODate(new Date());
-
-      renderAllCalendars();
-      await fetchMonth();
-      await fetchDay(selectedDate);
-      await handleCancelFromUrl();
+      await refreshSession();
+      if (currentUser){
+        await initAfterLogin();
+      } else {
+        setTab("cal");
+      }
     })();
   </script>
 </body>
