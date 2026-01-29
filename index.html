@@ -722,12 +722,16 @@
             if (t === pickStart) btn.classList.add("selected","edge");
           }
           if (pickStart != null && pickEnd != null){
-            const s = Math.min(pickStart, pickEnd);
-            const e = Math.max(pickStart, pickEnd);
-            // marca intervalo [s, e] (inclui e também para o usuário ver “fim”)
-            if (t >= s && t <= e) btn.classList.add("selected");
-            if (t === s || t === e) btn.classList.add("edge");
-          }
+          const s = Math.min(pickStart, pickEnd);
+          const e = Math.max(pickStart, pickEnd);
+        
+          // intervalo real [s, e) -> NÃO inclui o fim
+          if (t >= s && t < e) btn.classList.add("selected");
+        
+          // bordas (mostra início e fim)
+          if (t === s || t === e) btn.classList.add("edge");
+        }
+
 
           // bloqueios
           if (isBusyPoint || isPastTime){
@@ -744,48 +748,51 @@
               }
 
               // clique 2: define fim
-              if (pickStart != null && pickEnd == null){
-                if (t === pickStart){
-                  // clicar no mesmo: reset
-                  pickStart = null; pickEnd = null;
-                  buildSlots();
-                  updateSummary();
-                  return;
-                }
+              // clique 2: define fim
+if (pickStart != null && pickEnd == null){
+  if (t === pickStart){
+    pickStart = null; pickEnd = null;
+    buildSlots();
+    updateSummary();
+    return;
+  }
 
-                const s = Math.min(pickStart, t);
-                const e = Math.max(pickStart, t);
+  const s = Math.min(pickStart, t);
+  const e = Math.max(pickStart, t);
 
-                // precisa pelo menos 30 min
-                if ((e - s) < STEP_MIN){
-                  alert("Selecione pelo menos 30 minutos.");
-                  return;
-                }
+  if ((e - s) < STEP_MIN){
+    alert("Selecione pelo menos 30 minutos.");
+    return;
+  }
 
-                // máx 2h
-                if ((e - s) > MAX_MIN){
-                  alert("A reserva pode ter no máximo 2 horas.");
-                  return;
-                }
+  if ((e - s) > MAX_MIN){
+    alert("A reserva pode ter no máximo 2 horas.");
+    return;
+  }
 
-                // intervalo deve ser livre
-                // IMPORTANTE: tratamos o fim como “exclusivo” no banco; mas para clique é visual.
-                // vamos validar [s, e] como intervalo real: usar e+STEP como fim real
-                const realEnd = e + STEP_MIN;
-                if (realEnd > closeMin){
-                  alert("O horário final ultrapassa o fechamento.");
-                  return;
-                }
-                if (!intervalIsFree(s, realEnd)){
-                  alert("Esse intervalo cruza uma reserva existente. Escolha outro horário.");
-                  return;
-                }
+  if (e > closeMin){
+    alert("O horário final ultrapassa o fechamento.");
+    return;
+  }
 
-                pickEnd = t;
-                buildSlots();
-                updateSummary();
-                return;
-              }
+  const conflict = findOverlap(s, e);
+  if (conflict){
+    alert(
+      `Esse intervalo cruza uma reserva existente:\n` +
+      `${minToHHMM(conflict.s)} às ${minToHHMM(conflict.e)}\n\n` +
+      `Escolha outro horário.`
+    );
+    return;
+  }
+
+  pickStart = s;
+  pickEnd = e;
+
+  buildSlots();
+  updateSummary();
+  return;
+}
+
             };
           }
 
@@ -810,8 +817,9 @@
         const e = Math.max(pickStart, pickEnd);
 
         const timeIni = minToHHMM(s);
-        const timeFim = minToHHMM(e + STEP_MIN);
-        const dur = (e + STEP_MIN) - s;
+        const timeFim = minToHHMM(e);
+        const dur = e - s;
+
 
         $("summary").style.display = "";
         $("summary").innerHTML = `
@@ -884,7 +892,8 @@
         }
 
         const s = Math.min(pickStart, pickEnd);
-        const e = Math.max(pickStart, pickEnd) + STEP_MIN; // fim real exclusivo
+        const e = Math.max(pickStart, pickEnd); // fim real exclusivo (borda)
+
 
         if (selectedDate === todayIso && s < minStartToday){
           return alert("Esse horário já passou. Escolha outro.");
