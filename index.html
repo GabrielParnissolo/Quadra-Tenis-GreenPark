@@ -707,6 +707,11 @@
           return !busy.some(x => rangesOverlap(a,b,x.s,x.e));
         }
 
+        function findOverlap(a,b){
+        // retorna a reserva que está cruzando [a,b), ou null
+        return busy.find(x => rangesOverlap(a,b,x.s,x.e)) || null;
+      }
+
         // render dos botões
         for (let t=openMin; t<=closeMin; t+=STEP_MIN){
           const isPastTime = (selectedDate === todayIso) && (t < minStartToday);
@@ -748,9 +753,10 @@
               }
 
               // clique 2: define fim
-              // clique 2: define fim
+// clique 2: define fim
 if (pickStart != null && pickEnd == null){
   if (t === pickStart){
+    // clicar no mesmo: reset
     pickStart = null; pickEnd = null;
     buildSlots();
     updateSummary();
@@ -760,21 +766,25 @@ if (pickStart != null && pickEnd == null){
   const s = Math.min(pickStart, t);
   const e = Math.max(pickStart, t);
 
+  // precisa pelo menos 30 min
   if ((e - s) < STEP_MIN){
     alert("Selecione pelo menos 30 minutos.");
     return;
   }
 
+  // máx 2h
   if ((e - s) > MAX_MIN){
     alert("A reserva pode ter no máximo 2 horas.");
     return;
   }
 
+  // fim real [s, e) (borda)
   if (e > closeMin){
     alert("O horário final ultrapassa o fechamento.");
     return;
   }
 
+  // intervalo deve ser livre
   const conflict = findOverlap(s, e);
   if (conflict){
     alert(
@@ -785,13 +795,18 @@ if (pickStart != null && pickEnd == null){
     return;
   }
 
+  // grava bordas normalizadas
   pickStart = s;
   pickEnd = e;
 
+console.log("OK range:", pickStart, pickEnd, minToHHMM(pickStart), minToHHMM(pickEnd));
+
+  
   buildSlots();
   updateSummary();
   return;
 }
+
 
             };
           }
