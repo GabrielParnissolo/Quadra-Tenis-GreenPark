@@ -47,67 +47,127 @@
   </script>
 
   <style>
-    :root { --b:#e6e6e6; --muted:#6b7280; --green:#16a34a; --green2:#22c55e; }
-    body{font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin:0; background:#fafafa;}
-    .topbar{background:#0ea75a; color:#fff; padding:14px 16px; position:sticky; top:0; z-index:10;}
-    .topbar .title{font-weight:800; font-size:18px; display:flex; align-items:center; gap:10px;}
-    .topbar .subtitle{font-size:12px; opacity:.9; margin-left:28px; margin-top:2px;}
+    :root{
+      --b:#e6e6e6;
+      --muted:#6b7280;
+      --green:#16a34a;
+      --green2:#22c55e;
+      --bg1:#f6fbf8;
+      --shadow:0 10px 30px rgba(0,0,0,.06);
+    }
+    body{
+      font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin:0;
+      background: radial-gradient(1200px 400px at 50% -100px, #dff7ea 0%, rgba(223,247,234,0) 60%), #fafafa;
+    }
+    .topbar{
+      background: linear-gradient(90deg, #0ea75a, #14b86b);
+      color:#fff;
+      padding:14px 16px;
+      position:sticky;
+      top:0;
+      z-index:10;
+      box-shadow:0 8px 25px rgba(0,0,0,.12);
+    }
+    .topbar .title{font-weight:900; font-size:18px; display:flex; align-items:center; gap:10px;}
+    .topbar .subtitle{font-size:12px; opacity:.92; margin-left:28px; margin-top:2px;}
     .wrap{max-width:1100px; margin:0 auto; padding:14px;}
-    .card{background:#fff; border:1px solid var(--b); border-radius:14px; padding:12px; box-shadow:0 1px 0 rgba(0,0,0,.02);}
+
+    .card{
+      background:#fff;
+      border:1px solid var(--b);
+      border-radius:16px;
+      padding:14px;
+      box-shadow: var(--shadow);
+    }
     .row{display:flex; gap:10px; flex-wrap:wrap;}
     .muted{color:var(--muted);}
-    .btn{border:1px solid var(--b); background:#fff; padding:10px 12px; border-radius:12px; cursor:pointer;}
+    .divider{height:1px; background:#eef2f7; margin:12px 0;}
+    .sectionTitle{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+    .sectionTitle b{font-size:14px;}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      background:#f3f4f6; border:1px solid #e5e7eb;
+      padding:6px 10px; border-radius:999px; font-size:12px; color:#111827;
+    }
+
+    .btn{
+      border:1px solid var(--b);
+      background:#fff;
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      transition:transform .05s ease, box-shadow .15s ease, background .15s ease;
+    }
+    .btn:hover{box-shadow:0 8px 18px rgba(0,0,0,.06);}
+    .btn:active{transform:translateY(1px);}
     .btn.primary{background:#0ea75a; color:#fff; border-color:#0ea75a;}
     .btn.ghost{background:#f7f7f7;}
     .btn.small{padding:7px 10px; border-radius:10px; font-size:13px;}
-    .btn:disabled{opacity:.45; cursor:not-allowed;}
-    input, select{border:1px solid var(--b); border-radius:12px; padding:10px 12px; font-size:14px; background:#fff; width:100%;}
+    .btn:disabled{opacity:.45; cursor:not-allowed; box-shadow:none; transform:none;}
+    input, select{
+      border:1px solid var(--b);
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:14px;
+      background:#fff;
+      width:100%;
+      outline:none;
+    }
+    input:focus, select:focus{
+      border-color:#86efac;
+      box-shadow:0 0 0 3px rgba(34,197,94,.15);
+    }
+
     .grid{display:grid; gap:10px;}
     .two{grid-template-columns: 1fr 1fr;}
     @media(max-width:900px){ .two{grid-template-columns:1fr;} }
 
+    /* ===== CALENDÁRIO ===== */
     .monthHeader{display:flex; align-items:center; justify-content:space-between; gap:10px;}
     .monthTitle{font-weight:900; font-size:16px; text-transform:capitalize;}
     .cal{margin-top:10px;}
     .dow{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; font-size:12px; color:var(--muted); padding:0 2px 6px;}
     .days{display:grid; grid-template-columns:repeat(7,1fr); gap:10px;}
 
-    /* === DIA (CARD PADRÃO) === */
     .day{
       min-height:70px;
       padding:10px 8px;
       border:1px solid var(--b);
-      border-radius:12px;
+      border-radius:14px;
       background:#f3f4f6;
       cursor:pointer;
       position:relative;
-
       display:flex;
       flex-direction:column;
       align-items:center;
       justify-content:center;
+      transition:transform .06s ease, background .15s ease, border-color .15s ease;
     }
+    .day:hover:not(.off):not(.past){transform:translateY(-1px); border-color:#bbf7d0; background:#f0fdf4;}
     .day.off{background:#f3f4f6; color:#b3b3b3; cursor:default; opacity:.45;}
     .day.past{background:#f3f4f6; color:#b3b3b3; cursor:not-allowed; opacity:.55;}
     .day.selected{outline:2px solid #0ea75a; border-color:#0ea75a; background:#eafaf1;}
     .day .w{font-size:12px; font-weight:900; letter-spacing:.06em; color:#6b7280; margin-bottom:6px; text-transform:uppercase;}
     .day .n{font-size:22px; font-weight:900; line-height:1.1;}
 
-    /* bolinha (indicador de reservas) */
     .badge{
       width:12px; height:12px; min-width:12px; padding:0;
       border-radius:999px; border:none;
       background:#9ca3af; color:transparent;
       position:absolute; top:10px; right:10px;
     }
-    /* vermelho = reservas futuras (hoje ou depois) */
     .day.dot-red .badge{ background:#ef4444; }
-
-    /* HOJE: card branco e sem bolinha */
     .day.todayCell{ background:#fff; }
     .day.todayCell .badge{ display:none !important; }
 
-    /* ====== HUD (segmented control) ====== */
+    /* calendário compacto (na aba reservar) */
+    .calCompact .day{min-height:58px; padding:8px 6px; border-radius:12px;}
+    .calCompact .day .n{font-size:18px;}
+    .calCompact .days{gap:8px;}
+    .calCompact .dow{font-size:11px;}
+
+    /* ===== HUD ===== */
     .hud{
       position:fixed;
       left:50%;
@@ -128,7 +188,7 @@
       padding:10px 14px;
       border-radius:999px;
       cursor:pointer;
-      font-weight:800;
+      font-weight:900;
       min-width:120px;
     }
     .hud button.active{
@@ -137,28 +197,30 @@
       outline:1px solid #bfe8d0;
     }
 
-    /* ===== HORÁRIOS DISPONÍVEIS (igual modelo) ===== */
+    /* ===== SLOTS ===== */
     .slots{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
     .slot{
       border:1px solid #e5e7eb;
       background:#ffffff;
       color:#111827;
       padding:8px 12px;
-      border-radius:10px;
+      border-radius:12px;
       cursor:pointer;
       font-size:14px;
-      min-width:64px;
+      min-width:66px;
       text-align:center;
       transition:all .15s ease;
+      user-select:none;
     }
     .slot:hover:not(.busy):not(.out){
       border-color:#22c55e;
       background:#f0fdf4;
+      transform:translateY(-1px);
     }
     .slot.selected{
-      background:#22c55e;
+      background:linear-gradient(180deg, #22c55e, #16a34a);
       color:#ffffff;
-      border-color:#22c55e;
+      border-color:#16a34a;
       font-weight:900;
     }
     .slot.edge{
@@ -166,10 +228,17 @@
       outline-offset:1px;
     }
     .slot.busy{
-      background:rgba(239,68,68,.15);
+      background:rgba(239,68,68,.14);
       border-color:#ef4444;
       color:#b91c1c;
       cursor:not-allowed;
+    }
+    /* “borda ocupada” mas clicável como fim (ex.: 16:00 quando existe 16:00–18:00) */
+    .slot.busyEdge{
+      background:rgba(239,68,68,.08);
+      border-color:#ef4444;
+      color:#991b1b;
+      border-style:dashed;
     }
     .slot.out{
       background:#f3f4f6;
@@ -178,7 +247,7 @@
       cursor:not-allowed;
     }
 
-    /* ====== RESERVAR: layout "como na imagem" ====== */
+    /* ===== FORM ===== */
     .formGrid{
       display:grid;
       grid-template-columns:1fr 1fr;
@@ -196,7 +265,6 @@
       color:#111827;
       margin:4px 0 6px;
     }
-    .field .hint{font-size:12px; color:var(--muted); margin-top:6px;}
 
     .summaryBox{
       background:#ecfdf3;
@@ -209,7 +277,7 @@
     }
     .summaryBox b{display:block; margin-bottom:6px; color:#0b7a43;}
     .summaryLine{display:grid; grid-template-columns:110px 1fr; gap:8px; font-size:13px;}
-    .summaryLine span:first-child{color:#065f46; font-weight:800;}
+    .summaryLine span:first-child{color:#065f46; font-weight:900;}
 
     .confirmBar{
       margin-top:12px;
@@ -219,7 +287,6 @@
       flex-wrap:wrap;
     }
 
-    /* espaço pro HUD não cobrir conteúdo */
     .spacer{height:90px;}
   </style>
 </head>
@@ -228,7 +295,7 @@
   <div class="topbar">
     <div class="title">
       🎾 Quadra de Tênis
-      <span id="jsStatus" style="font-size:12px; opacity:.85;">(JS: 🔴)</span>
+      <span id="jsStatus" style="font-size:12px; opacity:.9;">(JS: 🔴)</span>
     </div>
     <div class="subtitle">Green Park</div>
   </div>
@@ -251,9 +318,7 @@
           <div class="days" id="days"></div>
         </div>
 
-        <div class="muted" style="margin-top:10px;">
-          Datas passadas ficam bloqueadas.
-        </div>
+        <div class="muted" style="margin-top:10px;">Datas passadas ficam bloqueadas.</div>
       </div>
 
       <div class="card">
@@ -271,19 +336,51 @@
 
     <!-- RESERVAR -->
     <div id="view-res" class="grid two" style="display:none;">
-      <div class="card">
-        <b>Horários disponíveis</b>
-        <div class="muted" style="margin-top:4px;">
-          Clique no <b>horário inicial</b> e depois no <b>horário final</b> (máx. 2h). Vermelho = ocupado.
+      <!-- ESQUERDA: calendário + horários -->
+      <div class="grid" style="gap:10px;">
+        <div class="card calCompact">
+          <div class="sectionTitle">
+            <b>📅 Selecione o dia</b>
+            <span class="pill">toque no dia</span>
+          </div>
+
+          <div class="monthHeader" style="margin-top:10px;">
+            <button class="btn small" id="prevMonthRes" type="button">◀</button>
+            <div class="monthTitle" id="monthTitleRes">mês</div>
+            <button class="btn small" id="nextMonthRes" type="button">▶</button>
+          </div>
+
+          <div class="cal">
+            <div class="dow">
+              <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div>
+            </div>
+            <div class="days" id="daysRes"></div>
+          </div>
+
+          <div class="muted" style="margin-top:8px;">Vermelho no dia = já existe reserva.</div>
         </div>
 
-        <div class="summaryBox" id="dayInfo" style="display:none;"></div>
+        <div class="card">
+          <div class="sectionTitle">
+            <b>⏱️ Horários disponíveis</b>
+            <span class="pill">máx. 2h</span>
+          </div>
 
-        <div class="slots" id="slots"></div>
+          <div class="muted" style="margin-top:6px;">
+            Clique no <b>horário inicial</b> e depois no <b>horário final</b>. Vermelho = ocupado.
+          </div>
+
+          <div class="summaryBox" id="dayInfo" style="display:none;"></div>
+          <div class="slots" id="slots"></div>
+        </div>
       </div>
 
+      <!-- DIREITA: dados + resumo -->
       <div class="card">
-        <b>Dados da Reserva</b>
+        <div class="sectionTitle">
+          <b>🧾 Dados da Reserva</b>
+          <span class="pill">preencha e confirme</span>
+        </div>
 
         <div class="formGrid">
           <div class="field">
@@ -406,13 +503,6 @@
     function rememberToken(resId, token){
       const s = loadStore(); s[resId] = token; saveStore(s);
     }
-    function forgetToken(resId){
-      const s = loadStore(); delete s[resId]; saveStore(s);
-    }
-    function tokenFor(resId){
-      const s = loadStore(); return s[resId] || null;
-    }
-
     function showMyCancelLinks(){
       const s = loadStore();
       const ids = Object.keys(s);
@@ -441,9 +531,9 @@
       let monthRows = [];
       let dayRows = [];
 
-      // seleção por dois cliques
+      // seleção por dois cliques (bordas)
       let pickStart = null; // minutos
-      let pickEnd = null;   // minutos (fim)
+      let pickEnd = null;   // minutos (fim / borda)
 
       // ====== HUD ======
       function setTab(which){
@@ -475,7 +565,7 @@
 
         if (error){ alert("Erro ao carregar mês: " + error.message); return; }
         monthRows = data || [];
-        renderMonthUI();
+        renderAllCalendars();
         renderWeeks();
       }
 
@@ -493,11 +583,11 @@
         updateSummary();
       }
 
-      // ====== Calendar render ======
-      function renderMonthUI(){
+      // ====== Calendar render (reutilizável para duas grades) ======
+      function renderMonthUI(targetMonthTitleId, targetDaysId){
         const y = current.getFullYear();
         const m = current.getMonth();
-        $("monthTitle").textContent = monthLabel(y,m);
+        $(targetMonthTitleId).textContent = monthLabel(y,m);
 
         const counts = new Map();
         for (const r of monthRows){
@@ -510,7 +600,9 @@
         const totalDays = last.getDate();
         const todayIso = toISODate(new Date());
 
-        $("days").innerHTML = "";
+        const daysEl = $(targetDaysId);
+        daysEl.innerHTML = "";
+
         for (let i=0;i<42;i++){
           const cell = document.createElement("div");
           cell.className = "day off";
@@ -536,10 +628,7 @@
             if (c > 0){
               const b = document.createElement("div");
               b.className = "badge";
-              b.textContent = "";
               cell.appendChild(b);
-
-              // futuro (hoje ou depois) = vermelho | passado = cinza
               if (!past) cell.classList.add("dot-red");
             }
 
@@ -553,7 +642,7 @@
               cell.onclick = async ()=>{
                 selectedDate = iso;
                 pickStart = null; pickEnd = null;
-                renderMonthUI();
+                renderAllCalendars();
                 renderWeeks();
                 await fetchDay(selectedDate);
                 setTab("res");
@@ -563,8 +652,13 @@
             cell.innerHTML = `<div class="n"> </div>`;
           }
 
-          $("days").appendChild(cell);
+          daysEl.appendChild(cell);
         }
+      }
+
+      function renderAllCalendars(){
+        renderMonthUI("monthTitle", "days");
+        renderMonthUI("monthTitleRes", "daysRes");
       }
 
       // ====== Agenda do mês (card list simples) ======
@@ -584,7 +678,6 @@
         const weeks = [...byWeek.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
 
         const filtered = weeks.filter(([wk])=>{
-          // mostra do "semana atual" pra frente (igual seu modelo “limpo”)
           return wk >= weekKey(new Date(todayIso+"T00:00:00"));
         });
 
@@ -610,7 +703,6 @@
 
           const list = weekDiv.querySelector(".monthList");
 
-          // agrupar por dia
           const dayMap = new Map();
           for (const r of items){
             if (!dayMap.has(r.data)) dayMap.set(r.data, []);
@@ -640,12 +732,10 @@
                   const ql = `📍 Quadra ${r.quadra || "-"}, Lote ${r.lote ?? "-"}`;
                   return `
                     <div style="border:1px solid #eef2ff; border-radius:12px; padding:10px;">
-                      <div style="display:flex; justify-content:space-between; gap:10px;">
-                        <div>
-                          <b>🕒 ${h1}-${h2}</b> <span class="muted">(${r.tipo})</span><br/>
-                          <span class="muted">👤 ${players || "-"}</span><br/>
-                          <span class="muted">${ql}</span>
-                        </div>
+                      <div>
+                        <b>🕒 ${h1}-${h2}</b> <span class="muted">(${r.tipo})</span><br/>
+                        <span class="muted">👤 ${players || "-"}</span><br/>
+                        <span class="muted">${ql}</span>
                       </div>
                     </div>
                   `;
@@ -657,7 +747,7 @@
               block.onclick = async ()=>{
                 selectedDate = dayIso;
                 pickStart = null; pickEnd = null;
-                renderMonthUI();
+                renderAllCalendars();
                 await fetchDay(selectedDate);
                 setTab("res");
               };
@@ -670,17 +760,15 @@
         }
       }
 
-      // ====== Slots build (INÍCIO e FIM) ======
+      // ====== Slots build (INÍCIO e FIM por bordas) ======
       function buildSlots(){
         const openMin = parseTimeMin(OPEN);
         const closeMin = parseTimeMin(CLOSE);
 
-        const busy = dayRows.map(r=>{
-          return {
-            s: parseTimeMin((r.horario_inicio||"00:00:00").slice(0,5)),
-            e: parseTimeMin((r.horario_fim||"00:00:00").slice(0,5)),
-          };
-        });
+        const busy = dayRows.map(r=>({
+          s: parseTimeMin((r.horario_inicio||"00:00:00").slice(0,5)),
+          e: parseTimeMin((r.horario_fim||"00:00:00").slice(0,5)),
+        }));
 
         $("slots").innerHTML = "";
 
@@ -692,7 +780,7 @@
           minStartToday = Math.max(openMin, roundUpToStep(nowMin, STEP_MIN));
         }
 
-        // topo info (igual ao resumo verde)
+        // topo info
         const d = new Date(selectedDate+"T00:00:00");
         $("dayInfo").style.display = "";
         $("dayInfo").innerHTML = `
@@ -702,136 +790,114 @@
           <div class="summaryLine"><span>Regra</span><span>Selecione início e fim (máx. 2h)</span></div>
         `;
 
-        // helper: checa se um intervalo [a,b] cruza reserva
-        function intervalIsFree(a,b){
-          return !busy.some(x => rangesOverlap(a,b,x.s,x.e));
+        function findOverlap(a,b){
+          return busy.find(x => rangesOverlap(a,b,x.s,x.e)) || null;
         }
 
-        function findOverlap(a,b){
-        // retorna a reserva que está cruzando [a,b), ou null
-        return busy.find(x => rangesOverlap(a,b,x.s,x.e)) || null;
-      }
+        const choosingEnd = (pickStart != null && pickEnd == null);
 
-        // render dos botões
         for (let t=openMin; t<=closeMin; t+=STEP_MIN){
           const isPastTime = (selectedDate === todayIso) && (t < minStartToday);
-          const isBusyPoint    = busy.some(x => t >= x.s && t < x.e);  // dentro de reserva [s,e)
-          const isBusyInterior = busy.some(x => t >  x.s && t < x.e);  // miolo (exclui bordas)
-          const isBusyStart    = busy.some(x => t === x.s);            // início exato de uma reserva
 
+          // visual “ocupado” (qualquer ponto dentro de [s,e))
+          const inBusy = busy.some(x => t >= x.s && t < x.e);
+          const atBusyStart = busy.some(x => t === x.s);
+
+          // bloqueio:
+          // - escolhendo início: bloqueia tudo que está em [s,e)
+          // - escolhendo fim: bloqueia só o miolo (t > s && t < e) (permite borda t==s)
+          const busyForDisable = choosingEnd
+            ? busy.some(x => t > x.s && t < x.e)
+            : inBusy;
 
           const btn = document.createElement("button");
           btn.type = "button";
-          btn.className = "slot" + (isBusyPoint ? " busy" : "") + (isPastTime ? " out" : "");
           btn.textContent = minToHHMM(t);
 
-          // estado visual seleção
+          // classes base
+          btn.className = "slot" + (inBusy ? " busy" : "") + (isPastTime ? " out" : "");
+
+          // se for “borda ocupada” e estamos escolhendo fim, deixa com estilo especial (clicável)
+          if (choosingEnd && atBusyStart && !isPastTime){
+            btn.classList.remove("busy");
+            btn.classList.add("busyEdge");
+          }
+
+          // seleção visual
           if (pickStart != null && pickEnd == null){
             if (t === pickStart) btn.classList.add("selected","edge");
           }
           if (pickStart != null && pickEnd != null){
-          const s = Math.min(pickStart, pickEnd);
-          const e = Math.max(pickStart, pickEnd);
-        
-          // intervalo real [s, e) -> NÃO inclui o fim
-          if (t >= s && t < e) btn.classList.add("selected");
-        
-          // bordas (mostra início e fim)
-          if (t === s || t === e) btn.classList.add("edge");
-        }
+            const s = Math.min(pickStart, pickEnd);
+            const e = Math.max(pickStart, pickEnd);
+            if (t >= s && t < e) btn.classList.add("selected");
+            if (t === s || t === e) btn.classList.add("edge");
+          }
 
+          const disabled = isPastTime || busyForDisable;
+          btn.disabled = disabled;
 
-          // bloqueios
-          // Regras de clique:
-// - Quando estamos escolhendo o INÍCIO (pickStart null OU já fechou intervalo),
-//   não pode clicar em horários ocupados.
-// - Quando estamos escolhendo o FIM (pickStart != null e pickEnd == null),
-//   pode clicar no INÍCIO de uma reserva (ex.: 16:00), mas não pode no meio dela.
-const choosingEnd = (pickStart != null && pickEnd == null);
-
-const shouldDisable =
-  isPastTime ||
-  (!choosingEnd && isBusyPoint) ||          // escolhendo início: bloqueia tudo que está ocupado
-  (choosingEnd && isBusyInterior);          // escolhendo fim: bloqueia apenas o miolo ocupado
-
-btn.disabled = shouldDisable;
-
-// só para ficar visualmente claro: se for início de reserva e estiver habilitado como "fim possível"
-if (choosingEnd && !btn.disabled && isBusyStart) {
-  btn.classList.add("edge"); // opcional: destaca como borda válida
-}
-
-if (!btn.disabled) {
-  btn.onclick = ()=>{ 
-    // ... mantém seu código atual de clique 1 / clique 2 aqui dentro ...
-  };
-}
-
+          if (!disabled){
+            btn.onclick = ()=>{
+              // clique 1: define início (ou recomeça)
+              if (pickStart == null || (pickStart != null && pickEnd != null)){
+                pickStart = t;
+                pickEnd = null;
+                buildSlots();
+                updateSummary();
+                return;
+              }
 
               // clique 2: define fim
-// clique 2: define fim
-if (pickStart != null && pickEnd == null){
-  if (t === pickStart){
-    // clicar no mesmo: reset
-    pickStart = null; pickEnd = null;
-    buildSlots();
-    updateSummary();
-    return;
-  }
+              if (pickStart != null && pickEnd == null){
+                if (t === pickStart){
+                  pickStart = null; pickEnd = null;
+                  buildSlots();
+                  updateSummary();
+                  return;
+                }
 
-  const s = Math.min(pickStart, t);
-  const e = Math.max(pickStart, t);
+                const s = Math.min(pickStart, t);
+                const e = Math.max(pickStart, t);
 
-  // precisa pelo menos 30 min
-  if ((e - s) < STEP_MIN){
-    alert("Selecione pelo menos 30 minutos.");
-    return;
-  }
+                if ((e - s) < STEP_MIN){
+                  alert("Selecione pelo menos 30 minutos.");
+                  return;
+                }
+                if ((e - s) > MAX_MIN){
+                  alert("A reserva pode ter no máximo 2 horas.");
+                  return;
+                }
+                if (e > closeMin){
+                  alert("O horário final ultrapassa o fechamento.");
+                  return;
+                }
 
-  // máx 2h
-  if ((e - s) > MAX_MIN){
-    alert("A reserva pode ter no máximo 2 horas.");
-    return;
-  }
+                const conflict = findOverlap(s, e);
+                if (conflict){
+                  alert(
+                    `Esse intervalo cruza uma reserva existente:\n` +
+                    `${minToHHMM(conflict.s)} às ${minToHHMM(conflict.e)}\n\n` +
+                    `Escolha outro horário.`
+                  );
+                  return;
+                }
 
-  // fim real [s, e) (borda)
-  if (e > closeMin){
-    alert("O horário final ultrapassa o fechamento.");
-    return;
-  }
+                pickStart = s;
+                pickEnd = e;
 
-  // intervalo deve ser livre
-  const conflict = findOverlap(s, e);
-  if (conflict){
-    alert(
-      `Esse intervalo cruza uma reserva existente:\n` +
-      `${minToHHMM(conflict.s)} às ${minToHHMM(conflict.e)}\n\n` +
-      `Escolha outro horário.`
-    );
-    return;
-  }
-
-  // grava bordas normalizadas
-  pickStart = s;
-  pickEnd = e;
-
-console.log("OK range:", pickStart, pickEnd, minToHHMM(pickStart), minToHHMM(pickEnd));
-
-  
-  buildSlots();
-  updateSummary();
-  return;
-}
-
-
+                buildSlots();
+                updateSummary();
+                return;
+              }
             };
           }
 
           $("slots").appendChild(btn);
         }
-      
+      }
 
-      // ====== Summary (Dados + Resumo igual imagem) ======
+      // ====== Summary ======
       function updateSummary(){
         if (pickStart == null || pickEnd == null){
           $("summary").style.display = "none";
@@ -850,7 +916,6 @@ console.log("OK range:", pickStart, pickEnd, minToHHMM(pickStart), minToHHMM(pic
         const timeIni = minToHHMM(s);
         const timeFim = minToHHMM(e);
         const dur = e - s;
-
 
         $("summary").style.display = "";
         $("summary").innerHTML = `
@@ -910,7 +975,6 @@ console.log("OK range:", pickStart, pickEnd, minToHHMM(pickStart), minToHHMM(pic
         if (!loteRaw || Number.isNaN(lote) || lote <= 0) return alert("Preencha o Lote (número).");
         if (pickStart==null || pickEnd==null) return alert("Selecione o horário inicial e o final.");
 
-        // bloquear horário passado no dia de hoje
         const todayIso = toISODate(new Date());
         const openMin = parseTimeMin(OPEN);
         const closeMin = parseTimeMin(CLOSE);
@@ -923,8 +987,7 @@ console.log("OK range:", pickStart, pickEnd, minToHHMM(pickStart), minToHHMM(pic
         }
 
         const s = Math.min(pickStart, pickEnd);
-        const e = Math.max(pickStart, pickEnd); // fim real exclusivo (borda)
-
+        const e = Math.max(pickStart, pickEnd); // fim exclusivo (borda)
 
         if (selectedDate === todayIso && s < minStartToday){
           return alert("Esse horário já passou. Escolha outro.");
@@ -953,8 +1016,6 @@ console.log("OK range:", pickStart, pickEnd, minToHHMM(pickStart), minToHHMM(pic
 
         if (error){
           const msg = (error.message||"").toLowerCase();
-
-          // >>> aqui ficam as mensagens amigáveis <<<
           if (msg.includes("max_duas") || msg.includes("duas reservas") || msg.includes("two") || msg.includes("limit")){
             return alert("Você já tem duas reservas ativas. Cancele uma para poder agendar este horário.");
           }
@@ -988,8 +1049,15 @@ console.log("OK range:", pickStart, pickEnd, minToHHMM(pickStart), minToHHMM(pic
       }
 
       // ====== Bind events ======
-      $("prevMonth").onclick = async ()=>{ current.setMonth(current.getMonth()-1); await fetchMonth(); };
-      $("nextMonth").onclick = async ()=>{ current.setMonth(current.getMonth()+1); await fetchMonth(); };
+      function changeMonth(delta){
+        current.setMonth(current.getMonth()+delta);
+        fetchMonth();
+      }
+      $("prevMonth").onclick = ()=>changeMonth(-1);
+      $("nextMonth").onclick = ()=>changeMonth(+1);
+      $("prevMonthRes").onclick = ()=>changeMonth(-1);
+      $("nextMonthRes").onclick = ()=>changeMonth(+1);
+
       $("reloadMonth").onclick = ()=>fetchMonth();
 
       $("tipo").onchange = updateSummary;
@@ -1005,7 +1073,7 @@ console.log("OK range:", pickStart, pickEnd, minToHHMM(pickStart), minToHHMM(pic
       current = new Date(); current.setDate(1);
       selectedDate = toISODate(new Date());
 
-      renderMonthUI();
+      renderAllCalendars();
       await fetchMonth();
       await fetchDay(selectedDate);
       await handleCancelFromUrl();
