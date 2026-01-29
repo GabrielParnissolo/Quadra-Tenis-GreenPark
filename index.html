@@ -53,6 +53,7 @@
     .topbar .title{font-weight:700; font-size:18px; display:flex; align-items:center; gap:10px;}
     .topbar .subtitle{font-size:12px; opacity:.9; margin-left:28px; margin-top:2px;}
     .wrap{max-width:1100px; margin:0 auto; padding:14px;}
+    .wrap{padding-bottom: 90px; }
     .card{background:#fff; border:1px solid var(--b); border-radius:14px; padding:12px; box-shadow:0 1px 0 rgba(0,0,0,.02);}
     .row{display:flex; gap:10px; flex-wrap:wrap;}
     .muted{color:var(--muted);}
@@ -62,9 +63,42 @@
     .btn.small{padding:7px 10px; border-radius:10px; font-size:13px;}
     .btn:disabled{opacity:.45; cursor:not-allowed;}
     input, select{border:1px solid var(--b); border-radius:12px; padding:10px 12px; font-size:14px; background:#fff;}
-    .tabs{display:flex; gap:8px; margin:10px 0 14px;}
-    .tab{flex:1; text-align:center; padding:10px 12px; border-radius:12px; border:1px solid var(--b); cursor:pointer; background:#fff;}
-    .tab.active{background:#eafaf1; border-color:#bfe8d0; color:#0b7a43; font-weight:700;}
+    /* ===== HUD flutuante (Calendário / Reservar) ===== */
+.tabs{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index:9999;
+
+  display:flex;
+  gap:8px;
+
+  width: min(420px, calc(100% - 24px));
+  padding:6px;
+
+  background:#fff;
+  border:1px solid var(--b);
+  border-radius:999px;
+  box-shadow:0 10px 30px rgba(0,0,0,.12);
+}
+
+.tab{
+  flex:1;
+  text-align:center;
+  padding:10px 12px;
+  border-radius:999px;
+  border:1px solid transparent;
+  cursor:pointer;
+  background:transparent;
+  font-weight:700;
+}
+
+.tab.active{
+  background:#eafaf1;
+  border-color:#bfe8d0;
+  color:#0b7a43;
+}
     .grid{display:grid; gap:10px;}
     .two{grid-template-columns: 1fr 1fr;}
     @media(max-width:900px){ .two{grid-template-columns:1fr;} }
@@ -360,11 +394,6 @@
 
   </div>
 
-  <div class="footerBar">
-    <div class="tab active" id="tab-cal-b">Calendário</div>
-    <div class="tab" id="tab-res-b">Reservar</div>
-  </div>
-
   <div id="fatal" class="fatal">
     <b>Não foi possível inicializar</b>
     <div id="fatalMsg"></div>
@@ -486,8 +515,9 @@
         $("view-cal").style.display = calOn ? "" : "none";
         $("view-res").style.display = calOn ? "none" : "";
 
-        for (const id of ["tab-cal","tab-cal-b"]) $(id).classList.toggle("active", calOn);
-        for (const id of ["tab-res","tab-res-b"]) $(id).classList.toggle("active", !calOn);
+        for (const id of ["tab-cal"]) $(id).classList.toggle("active", calOn);
+        for (const id of ["tab-res"]) $(id).classList.toggle("active", !calOn);
+
       }
 
       // ====== Data loading ======
@@ -942,10 +972,10 @@ if (c > 0){
       }
 
       // ====== Bind events (agora tudo já existe no DOM) ======
+      // ====== Bind events (agora tudo já existe no DOM) ======
       $("tab-cal").onclick = ()=>setTab("cal");
-      $("tab-cal-b").onclick = ()=>setTab("cal");
       $("tab-res").onclick = ()=>setTab("res");
-      $("tab-res-b").onclick = ()=>setTab("res");
+
 
       $("prevMonth").onclick = async ()=>{ current.setMonth(current.getMonth()-1); await fetchMonth(); };
       $("nextMonth").onclick = async ()=>{ current.setMonth(current.getMonth()+1); await fetchMonth(); };
