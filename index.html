@@ -503,6 +503,13 @@
     function rememberToken(resId, token){
       const s = loadStore(); s[resId] = token; saveStore(s);
     }
+    function forgetToken(resId){
+  const s = loadStore(); delete s[resId]; saveStore(s);
+}
+function tokenFor(resId){
+  const s = loadStore(); return s[resId] || null;
+}
+
     function showMyCancelLinks(){
       const s = loadStore();
       const ids = Object.keys(s);
@@ -730,15 +737,52 @@
                   const h2 = (r.horario_fim||"").slice(0,5);
                   const players = [r.jogador1, r.jogador2].filter(Boolean).join(" vs ");
                   const ql = `📍 Quadra ${r.quadra || "-"}, Lote ${r.lote ?? "-"}`;
-                  return `
-                    <div style="border:1px solid #eef2ff; border-radius:12px; padding:10px;">
-                      <div>
-                        <b>🕒 ${h1}-${h2}</b> <span class="muted">(${r.tipo})</span><br/>
-                        <span class="muted">👤 ${players || "-"}</span><br/>
-                        <span class="muted">${ql}</span>
-                      </div>
-                    </div>
-                  `;
+                  const canCancel = !!tokenFor(r.id);
+
+                  block.querySelectorAll(".cancelMine").forEach(btn=>{
+  btn.onclick = async (ev)=>{
+    ev.stopPropagation(); // não abre o dia ao cancelar
+    const resId = btn.getAttribute("data-resid");
+    await cancelMyReservationById(resId);
+  };
+});
+
+// depois disso continua normal
+if (dayIso >= todayIso){
+  block.onclick = async ()=>{
+    selectedDate = dayIso;
+    pickStart = null; pickEnd = null;
+    renderMonthUI();
+    await fetchDay(selectedDate);
+    setTab("res");
+  };
+}
+
+list.appendChild(block);
+
+return `
+  <div style="border:1px solid #eef2ff; border-radius:12px; padding:10px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+      <div>
+        <b>🕒 ${h1}-${h2}</b> <span class="muted">(${r.tipo})</span><br/>
+        <span class="muted">👤 ${players || "-"}</span><br/>
+        <span class="muted">${ql}</span>
+      </div>
+
+      ${canCancel ? `
+        <button
+          type="button"
+          class="btn small ghost cancelMine"
+          data-resid="${r.id}"
+          style="border-color:#fecaca; color:#991b1b; background:#fff5f5;"
+        >
+          Cancelar
+        </button>
+      ` : ``}
+    </div>
+  </div>
+`;
+
                 }).join("")}
               </div>
             `;
@@ -939,6 +983,33 @@
         }
         return !!data;
       }
+
+      async function cancelMyReservationById(resId){
+  const token = tokenFor(resId);
+  if (!token){
+    alert("Este aparelho não tem o token dessa reserva. (Somente o dono consegue cancelar aqui.)");
+    return;
+  }
+
+  if (!confirm("Tem certeza que deseja cancelar esta reserva?")) return;
+
+  const { data, error } = await supabase.rpc("cancel_reserva", { p_token: token });
+  if (error){
+    alert("Erro ao cancelar: " + error.message);
+    return;
+  }
+
+  if (!data){
+    alert("Token inválido ou reserva já cancelada.");
+    return;
+  }
+
+  forgetToken(resId);
+
+  alert("Reserva cancelada!");
+  await fetchMonth();
+  await fetchDay(selectedDate);
+}
 
       async function handleCancelFromUrl(){
         const url = new URL(window.location.href);
