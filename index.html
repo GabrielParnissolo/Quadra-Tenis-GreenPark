@@ -699,7 +699,15 @@
         return;
       }
 
-      const supabase = sb.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const supabase = sb.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: window.localStorage
+  }
+});
+
 
       // ====== STATE ======
       let current = new Date(); current.setDate(1);
@@ -774,28 +782,37 @@
       }
 
       async function signUp(){
-        const phoneNorm = normalizePhone($("authPhone").value);
-        const pass = $("authPass").value;
+  const phoneNorm = normalizePhone($("authPhone").value);
+  const pass = $("authPass").value;
 
-        if (!phoneNorm) return setAuthMessage("Digite seu telefone.");
-        if (!pass || pass.length < 6) return setAuthMessage("Crie uma senha (mínimo 6 caracteres).");
+  if (!phoneNorm) return setAuthMessage("Digite seu telefone.");
+  if (!pass || pass.length < 6) return setAuthMessage("Crie uma senha (mínimo 6 caracteres).");
 
-        setAuthMessage("Criando conta...");
-        const email = phoneToEmail(phoneNorm);
+  setAuthMessage("Criando conta...");
+  const email = phoneToEmail(phoneNorm);
 
-        const { error } = await supabase.auth.signUp({
-          email,
-          password: pass,
-          options: { data: { phone: phoneNorm } }
-        });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password: pass,
+    options: { data: { phone: phoneNorm } }
+  });
 
-        if (error){
-          setAuthMessage("Não deu para criar conta: " + error.message);
-          return;
-        }
+  if (error){
+    setAuthMessage("Não deu para criar conta: " + error.message);
+    return;
+  }
 
-        setAuthMessage("Conta criada! Agora clique em Entrar.");
-      }
+  // Se o projeto estiver com confirmação OFF, às vezes já vem session
+  if (data?.session){
+    setAuthMessage("");
+    await refreshSession();
+    await initAfterLogin();
+    return;
+  }
+
+  setAuthMessage("Conta criada! Agora clique em Entrar. (Se não entrar, desative a confirmação de e-mail no Supabase.)");
+}
+
 
       $("btnSignIn").onclick = ()=>signIn();
       $("btnSignUp").onclick = ()=>signUp();
