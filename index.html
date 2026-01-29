@@ -715,7 +715,10 @@
         // render dos botões
         for (let t=openMin; t<=closeMin; t+=STEP_MIN){
           const isPastTime = (selectedDate === todayIso) && (t < minStartToday);
-          const isBusyPoint = busy.some(x => t >= x.s && t < x.e); // dentro de reserva
+          const isBusyPoint    = busy.some(x => t >= x.s && t < x.e);  // dentro de reserva [s,e)
+          const isBusyInterior = busy.some(x => t >  x.s && t < x.e);  // miolo (exclui bordas)
+          const isBusyStart    = busy.some(x => t === x.s);            // início exato de uma reserva
+
 
           const btn = document.createElement("button");
           btn.type = "button";
@@ -739,18 +742,31 @@
 
 
           // bloqueios
-          if (isBusyPoint || isPastTime){
-            btn.disabled = true;
-          } else {
-            btn.onclick = ()=>{
-              // clique 1: define início
-              if (pickStart == null || (pickStart != null && pickEnd != null)){
-                pickStart = t;
-                pickEnd = null;
-                buildSlots();
-                updateSummary();
-                return;
-              }
+          // Regras de clique:
+// - Quando estamos escolhendo o INÍCIO (pickStart null OU já fechou intervalo),
+//   não pode clicar em horários ocupados.
+// - Quando estamos escolhendo o FIM (pickStart != null e pickEnd == null),
+//   pode clicar no INÍCIO de uma reserva (ex.: 16:00), mas não pode no meio dela.
+const choosingEnd = (pickStart != null && pickEnd == null);
+
+const shouldDisable =
+  isPastTime ||
+  (!choosingEnd && isBusyPoint) ||          // escolhendo início: bloqueia tudo que está ocupado
+  (choosingEnd && isBusyInterior);          // escolhendo fim: bloqueia apenas o miolo ocupado
+
+btn.disabled = shouldDisable;
+
+// só para ficar visualmente claro: se for início de reserva e estiver habilitado como "fim possível"
+if (choosingEnd && !btn.disabled && isBusyStart) {
+  btn.classList.add("edge"); // opcional: destaca como borda válida
+}
+
+if (!btn.disabled) {
+  btn.onclick = ()=>{ 
+    // ... mantém seu código atual de clique 1 / clique 2 aqui dentro ...
+  };
+}
+
 
               // clique 2: define fim
 // clique 2: define fim
