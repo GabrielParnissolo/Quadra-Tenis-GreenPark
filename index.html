@@ -271,6 +271,53 @@
 .resActions{display:flex; align-items:center;}
 .resActions .btn{white-space:nowrap;}
 
+    /* ===== HORÁRIOS (ABA RESERVAR) ===== */
+
+.slots{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+
+/* horário LIVRE */
+.slot{
+  border:1px solid #e5e7eb;
+  background:#ffffff;
+  padding:8px 10px;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:13px;
+  color:#111827;
+  transition:all .15s ease;
+}
+
+/* horário SELECIONADO */
+.slot.selected{
+  background:#eafaf1;
+  border-color:#0ea75a;
+  outline:2px solid rgba(14,167,90,.25);
+  color:#0b7a43;
+  font-weight:700;
+}
+
+/* horário OCUPADO (vermelho translúcido) */
+.slot.busy{
+  background:rgba(239,68,68,.18);
+  border-color:rgba(239,68,68,.45);
+  color:#991b1b;
+  cursor:not-allowed;
+}
+
+/* horário indisponível (passado no dia atual) */
+.slot.out{
+  background:#f3f4f6;
+  border-color:#e5e7eb;
+  color:#9ca3af;
+  cursor:not-allowed;
+}
+
+
     
   </style>
 </head>
