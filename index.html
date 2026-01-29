@@ -749,14 +749,18 @@ function tokenFor(resId){
 
 // depois disso continua normal
 if (dayIso >= todayIso){
-  block.onclick = async ()=>{
+  block.onclick = async (ev)=>{
+    // se clicou no botão "Cancelar" (ou dentro dele), não abre a aba Reservar
+    if (ev.target.closest(".cancelMine")) return;
+
     selectedDate = dayIso;
     pickStart = null; pickEnd = null;
-    renderMonthUI();
+    renderAllCalendars();
     await fetchDay(selectedDate);
     setTab("res");
   };
 }
+
 
 list.appendChild(block);
 
