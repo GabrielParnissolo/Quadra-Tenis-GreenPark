@@ -165,6 +165,79 @@
 /* esconder selo antigo "Hoje" */
 .todayTag{ display:none !important; }
 
+/* ===== AGENDA DO MÊS (MODELO BONITO) ===== */
+.agendaList{display:grid; gap:12px; margin-top:12px;}
+.dayt
+.dayBlock{
+  border:1px solid var(--b);
+  border-radius:14px;
+  background:#fff;
+  overflow:hidden;
+}
+.dayBlock.today{
+  border:2px solid #0ea75a;
+  background:#eafaf1;
+}
+.dayHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 12px;
+  border-bottom:1px solid #f1f1f1;
+}
+.dayHead .left{
+  display:flex; align-items:center; gap:10px;
+  font-weight:800;
+}
+.dayHead .left .icon{font-size:14px; opacity:.85;}
+.dayHead .sub{
+  font-weight:700;
+  color:var(--muted);
+}
+.todayPill{
+  background:#0ea75a;
+  color:#fff;
+  border-radius:999px;
+  font-size:12px;
+  padding:4px 10px;
+  font-weight:800;
+}
+.dayBody{padding:12px;}
+.emptyHint{
+  color:var(--muted);
+  text-align:center;
+  padding:18px 10px;
+}
+.resCard{
+  border:1px solid #e8e8e8;
+  border-radius:12px;
+  background:#fafafa;
+  padding:10px 10px;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:10px;
+}
+.resCard:first-child{margin-top:0;}
+.resMain{font-size:13px;}
+.resMain .line1{display:flex; align-items:center; gap:8px; font-weight:800;}
+.tagTipo{
+  font-weight:800;
+  font-size:12px;
+  padding:3px 8px;
+  border-radius:8px;
+  background:#e8f1ff;
+  border:1px solid #dbeafe;
+  color:#1d4ed8;
+}
+.resMain .line2{color:var(--muted); margin-top:4px;}
+.resMain .line3{color:var(--muted); margin-top:4px;}
+/* botão cancelar no card */
+.resActions{display:flex; align-items:center;}
+.resActions .btn{white-space:nowrap;}
+
+    
   </style>
 </head>
 
@@ -548,141 +621,123 @@ if (c > 0){
 
       // ====== Weeks render ======
       function renderWeeks(){
-        const container = $("weeks");
-        container.innerHTML = "";
+  const container = $("weeks");
+  container.innerHTML = "";
 
-        const todayIso = toISODate(new Date());
+  // em vez de semanas, vamos montar "dias do mês" em lista
+  const y = current.getFullYear();
+  const m = current.getMonth();
+  const totalDays = new Date(y, m+1, 0).getDate();
 
-        const byWeek = new Map();
-        for (const r of monthRows){
-          const d = new Date(r.data+"T00:00:00");
-          const wk = weekKey(d);
-          if (!byWeek.has(wk)) byWeek.set(wk, []);
-          byWeek.get(wk).push(r);
-        }
+  const todayIso = toISODate(new Date());
 
-        const weeks = [...byWeek.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+  // cria lista de dias do mês
+  const days = [];
+  for (let d=1; d<=totalDays; d++){
+    const iso = `${y}-${pad(m+1)}-${pad(d)}`;
+    days.push(iso);
+  }
 
-        const filtered = weeks.filter(([wk])=>{
-          if (showOlder) return true;
-          return wk >= weekKey(new Date(todayIso+"T00:00:00"));
-        });
+  // filtro "Ver dias anteriores"
+  const visibleDays = days.filter(iso => showOlder ? true : (iso >= todayIso));
 
-        if (!filtered.length){
-          container.innerHTML = `<div class="muted">Sem reservas para este filtro.</div>`;
-          return;
-        }
+  // wrapper
+  const list = document.createElement("div");
+  list.className = "agendaList";
+  container.appendChild(list);
 
-        for (const [wk, items] of filtered){
-          const wkStart = new Date(wk+"T00:00:00");
-          const wkEnd = new Date(wkStart); wkEnd.setDate(wkEnd.getDate()+6);
-          const label = `${pad(wkStart.getDate())}/${pad(wkStart.getMonth()+1)} – ${pad(wkEnd.getDate())}/${pad(wkEnd.getMonth()+1)}`;
+  if (!visibleDays.length){
+    list.innerHTML = `<div class="muted">Sem dias para este filtro.</div>`;
+    return;
+  }
 
-          const weekDiv = document.createElement("div");
-          weekDiv.className = "weekCard";
-          weekDiv.innerHTML = `
-            <div class="weekTitle">
-              <b>Semana (${label})</b>
-              <span class="muted">${items.length} reserva(s)</span>
-            </div>
-            <div class="dayList"></div>
-          `;
+  for (const dayIso of visibleDays){
+    const dayObj = new Date(dayIso+"T00:00:00");
+    const dayName = weekdayLabel(dayObj); // "QUINTA-FEIRA"
+    const headLabel = `${pad(dayObj.getDate())}/${pad(dayObj.getMonth()+1)} - ${dayName}`;
 
-          const dayList = weekDiv.querySelector(".dayList");
+    const dayItems = monthRows.filter(x=>x.data===dayIso);
 
-          const days = [];
-          for (let i=0;i<7;i++){
-            const d = new Date(wkStart);
-            d.setDate(d.getDate()+i);
-            if (d.getMonth() === current.getMonth()){
-              days.push(toISODate(d));
-            }
-          }
+    const block = document.createElement("div");
+    block.className = "dayBlock" + (dayIso === todayIso ? " today" : "");
+    block.innerHTML = `
+      <div class="dayHead">
+        <div class="left">
+          <div class="icon">📅</div>
+          <div>
+            <div>${headLabel}</div>
+          </div>
+        </div>
+        ${dayIso === todayIso ? `<div class="todayPill">Hoje</div>` : ``}
+      </div>
+      <div class="dayBody"></div>
+    `;
 
-          for (const dayIso of days){
-            const dayObj = new Date(dayIso+"T00:00:00");
-            const dayName = weekdayLabel(dayObj);
-            const isSel = dayIso===selectedDate;
+    const body = block.querySelector(".dayBody");
 
-            const dayItems = monthRows.filter(x=>x.data===dayIso);
+    if (!dayItems.length){
+      body.innerHTML = `<div class="emptyHint">Clique para agendar</div>`;
+    } else {
+      body.innerHTML = dayItems.map(r=>{
+        const title = [r.jogador1, r.jogador2].filter(Boolean).join(" vs ");
+        const ql = `📍 Quadra ${r.quadra || "-"}, Lote ${r.lote ?? "-"}`;
 
-            const dayCard = document.createElement("div");
-            dayCard.className = "dayCard";
-            dayCard.innerHTML = `
-              <div class="hdr">
-                <div><b>${pad(dayObj.getDate())}/${pad(dayObj.getMonth()+1)}</b> <span class="muted">• ${dayName}</span></div>
-                <span class="pill">${dayItems.length}</span>
+        const myToken = tokenFor(r.id);
+        const cancelBtn = myToken
+          ? `<button class="btn small ghost" data-cancel="${r.id}" type="button">Cancelar</button>`
+          : ``;
+
+        return `
+          <div class="resCard">
+            <div class="resMain">
+              <div class="line1">
+                <span>🕒 ${(r.horario_inicio||"").slice(0,5)}–${(r.horario_fim||"").slice(0,5)}</span>
+                <span class="tagTipo">${r.tipo}</span>
               </div>
-              <div class="muted" style="margin-top:6px;">${dayItems.length ? "" : "Clique para agendar"}</div>
-              <div class="resWrap"></div>
-            `;
+              <div class="line2">👥 ${title || "—"}</div>
+              <div class="line3">${ql}</div>
+            </div>
+            <div class="resActions">${cancelBtn}</div>
+          </div>
+        `;
+      }).join("");
+    }
 
-            if (isSel){
-              dayCard.style.outline = "2px solid #0ea75a";
-              dayCard.style.borderColor = "#0ea75a";
-            }
+    // clicar no card do dia abre a aba Reservar (se não for passado)
+    const past = dayIso < todayIso;
+    block.addEventListener("click", ()=>{
+      if (past) return;
+      selectedDate = dayIso;
+      $("datePick").value = selectedDate;
+      selectedStartMin = null; selectedEndMin = null;
+      renderMonthUI();
+      renderWeeks();
+      fetchDay(selectedDate);
+      setTab("res");
+    });
 
-            const past = dayIso < toISODate(new Date());
-            dayCard.onclick = ()=>{
-              if (past) return;
-              selectedDate = dayIso;
-              $("datePick").value = selectedDate;
-              selectedStartMin = null; selectedEndMin = null;
-              renderMonthUI();
-              renderWeeks();
-              fetchDay(selectedDate);
-              setTab("res");
-            };
+    list.appendChild(block);
+  }
 
-            const wrap = dayCard.querySelector(".resWrap");
-            wrap.innerHTML = dayItems.map(r=>{
-              const title = [r.jogador1, r.jogador2].filter(Boolean).join(" vs ");
-              const ql = `Quadra ${r.quadra || "-"}, Lote ${r.lote ?? "-"}`;
-
-              const myToken = tokenFor(r.id);
-              const cancelBtn = myToken
-                ? `<button class="btn small ghost" data-cancel="${r.id}" type="button">Cancelar</button>`
-                : "";
-
-              return `
-                <div class="resItem">
-                  <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                    <div>
-                      <b>${(r.horario_inicio||"").slice(0,5)}–${(r.horario_fim||"").slice(0,5)}</b>
-                      <span class="pill" style="margin-left:6px;">${r.tipo}</span><br/>
-                      <span class="muted">${title || ""}</span><br/>
-                      <span class="muted">${ql}</span>
-                    </div>
-                    <div>${cancelBtn}</div>
-                  </div>
-                </div>
-              `;
-            }).join("");
-
-            dayList.appendChild(dayCard);
-          }
-
-          container.appendChild(weekDiv);
-        }
-
-        // bind "Cancelar" (somente reservas criadas neste aparelho)
-        container.querySelectorAll("[data-cancel]").forEach(btn=>{
-          btn.addEventListener("click", async (e)=>{
-            e.stopPropagation();
-            const resId = btn.getAttribute("data-cancel");
-            const tok = tokenFor(resId);
-            if (!tok) return alert("Token não encontrado neste aparelho.");
-            if (!confirm("Cancelar esta reserva agora?")) return;
-            const ok = await cancelByToken(tok);
-            if (ok){
-              forgetToken(resId);
-              alert("Reserva cancelada!");
-              await fetchMonth();
-              await fetchDay(selectedDate);
-            }
-          });
-        });
+  // bind dos botões "Cancelar"
+  container.querySelectorAll("[data-cancel]").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const resId = btn.getAttribute("data-cancel");
+      const tok = tokenFor(resId);
+      if (!tok) return alert("Token não encontrado neste aparelho.");
+      if (!confirm("Cancelar esta reserva agora?")) return;
+      const ok = await cancelByToken(tok);
+      if (ok){
+        forgetToken(resId);
+        alert("Reserva cancelada!");
+        await fetchMonth();
+        await fetchDay(selectedDate);
       }
+    });
+  });
+}
+
 
       // ====== Slots build ======
       function buildSlots(){
