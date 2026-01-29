@@ -333,16 +333,34 @@
         <b>Selecione o dia</b>
         <div class="muted">Escolha a data e a duração. Datas passadas não permitem reservar.</div>
 
-        <div class="row" style="margin-top:10px; align-items:center;">
-          <input id="datePick" type="date" />
-          <select id="duration">
-            <option value="30">30 min</option>
-            <option value="60" selected>1 hora</option>
-            <option value="90">1h 30min</option>
-            <option value="120">2 horas</option>
-          </select>
-          <button class="btn small ghost" id="loadDay" type="button">Carregar horários</button>
-        </div>
+        <!-- Calendário também na Reserva -->
+<div class="monthHeader" style="margin-top:10px;">
+  <button class="btn small" id="prevMonthRes" type="button">◀</button>
+  <div class="monthTitle" id="monthTitleRes">mês</div>
+  <button class="btn small" id="nextMonthRes" type="button">▶</button>
+</div>
+
+<div class="cal">
+  <div class="dow">
+    <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div>
+  </div>
+  <div class="days" id="daysRes"></div>
+</div>
+
+<div class="row" style="margin-top:10px; align-items:center;">
+  <!-- mantém o input date escondido só pra compatibilidade -->
+  <input id="datePick" type="date" style="display:none;" />
+  <select id="duration">
+    <option value="30">30 min</option>
+    <option value="60" selected>1 hora</option>
+    <option value="90">1h 30min</option>
+    <option value="120">2 horas</option>
+  </select>
+
+  <!-- você pode remover o botão, agora troca sozinho -->
+  <button class="btn small ghost" id="loadDay" type="button" style="display:none;">Carregar horários</button>
+</div>
+
 
         <div class="okBox" id="dayInfo" style="display:none;"></div>
 
@@ -392,11 +410,6 @@
       </div>
     </div>
 
-  </div>
-
-  <div id="fatal" class="fatal">
-    <b>Não foi possível inicializar</b>
-    <div id="fatalMsg"></div>
   </div>
 
   <script>
@@ -488,9 +501,9 @@
     (async function bootstrap(){
       const sb = await waitForSupabase();
       if (!sb){
-        showFatal("Biblioteca do Supabase não carregou (CDN bloqueado/lento). Tente outra rede ou recarregue.");
-        return;
-      }
+  console.error("Supabase não carregou.");
+  return;
+}
 
       let supabase;
       try{
@@ -558,96 +571,117 @@
 
       // ====== Calendar render ======
       function renderMonthUI(){
-        const y = current.getFullYear();
-        const m = current.getMonth();
-        $("monthTitle").textContent = monthLabel(y,m);
+  const y = current.getFullYear();
+  const m = current.getMonth();
 
-        const counts = new Map();
-        for (const r of monthRows){
-          counts.set(r.data, (counts.get(r.data)||0)+1);
+  // títulos (Calendário e Reserva)
+  const titleA = $("monthTitle");
+  const titleB = $("monthTitleRes");
+  if (titleA) titleA.textContent = monthLabel(y,m);
+  if (titleB) titleB.textContent = monthLabel(y,m);
+
+  const counts = new Map();
+  for (const r of monthRows){
+    counts.set(r.data, (counts.get(r.data)||0)+1);
+  }
+
+  const first = new Date(y,m,1);
+  const last = new Date(y,m+1,0);
+  const startDow = (first.getDay()+6)%7; // Mon=0
+  const totalDays = last.getDate();
+
+  const todayIso = toISODate(new Date());
+
+  // garante min do datePick (mesmo escondido)
+  if ($("datePick")){
+    $("datePick").min = todayIso;
+    if (selectedDate < todayIso) selectedDate = todayIso;
+    $("datePick").value = selectedDate;
+  }
+
+  function renderInto(targetId, onPick){
+    const grid = $(targetId);
+    if (!grid) return;
+
+    grid.innerHTML = "";
+    for (let i=0;i<42;i++){
+      const cell = document.createElement("div");
+      cell.className = "day off";
+      const dayNum = i - startDow + 1;
+
+      if (dayNum>=1 && dayNum<=totalDays){
+        const dObj = new Date(y,m,dayNum);
+        const iso = toISODate(dObj);
+        const past = iso < todayIso;
+
+        cell.className =
+          "day" +
+          (iso === selectedDate ? " selected" : "") +
+          (past ? " past" : "");
+
+        // SIGLA + NÚMERO
+        const wShort = weekdayShort(dObj);
+        cell.innerHTML = `
+          <div class="w">${wShort}</div>
+          <div class="n">${dayNum}</div>
+        `;
+
+        // bolinha: cinza passado, vermelha futuro (como você explicou)
+        const c = counts.get(iso) || 0;
+        if (c > 0){
+          const b = document.createElement("div");
+          b.className = "badge";
+          b.textContent = ""; // só bolinha
+          cell.appendChild(b);
+
+          if (!past) cell.classList.add("dot-red");
         }
 
-        const first = new Date(y,m,1);
-        const last = new Date(y,m+1,0);
-        const startDow = (first.getDay()+6)%7; // Mon=0
-        const totalDays = last.getDate();
-
-        const todayIso = toISODate(new Date());
-
-        $("days").innerHTML = "";
-        for (let i=0;i<42;i++){
-          const cell = document.createElement("div");
-          cell.className = "day off";
-          const dayNum = i - startDow + 1;
-
-          if (dayNum>=1 && dayNum<=totalDays){
-            const dObj = new Date(y,m,dayNum);
-            const iso = toISODate(dObj);
-
-            const past = iso < todayIso;
-
-cell.className =
-  "day" +
-  (iso === selectedDate ? " selected" : "") +
-  (past ? " past" : "");
-
-// SIGLA DO DIA
-const wShort = weekdayShort(dObj);
-cell.innerHTML = `
-  <div class="w">${wShort}</div>
-  <div class="n">${dayNum}</div>
-`;
-
-// ===== BOLINHA (badge) =====
-const c = counts.get(iso) || 0;
-if (c > 0){
-  const b = document.createElement("div");
-  b.className = "badge";
-  b.textContent = "";
-  cell.appendChild(b);
-
-  // futuro (hoje ou depois) = vermelho | passado = cinza
-  if (!past) cell.classList.add("dot-red");
-}
-
-
-           if (iso === todayIso){
-  cell.classList.add("todayCell");
-
-  // troca a sigla por "HOJE"
-  const wEl = cell.querySelector(".w");
-  if (wEl) wEl.textContent = "HOJE";
-
-  const t = document.createElement("div");
-  t.className = "todayTag";
-  t.textContent = "Hoje";
-  cell.appendChild(t);
-}
-
-
-
-            if (!past){
-              cell.onclick = ()=>{
-                selectedDate = iso;
-                $("datePick").value = selectedDate;
-                selectedStartMin = null; selectedEndMin = null;
-                renderMonthUI();
-                renderWeeks();
-                fetchDay(selectedDate);
-              };
-            }
-          } else {
-  cell.innerHTML = `<div class="w"></div><div class="n"></div>`;
-}
-
-          $("days").appendChild(cell);
+        // HOJE: mostra "HOJE" no topo (e já esconde bolinha via CSS)
+        if (iso === todayIso){
+          cell.classList.add("todayCell");
+          const wEl = cell.querySelector(".w");
+          if (wEl) wEl.textContent = "HOJE";
         }
 
-        // bloqueia datas passadas no input
-        $("datePick").min = todayIso;
-        if (selectedDate < todayIso) selectedDate = todayIso;
-        $("datePick").value = selectedDate;
+        if (!past){
+          cell.onclick = async ()=>{
+            selectedDate = iso;
+
+            if ($("datePick")) $("datePick").value = selectedDate;
+
+            selectedStartMin = null;
+            selectedEndMin = null;
+
+            // redesenha os 2 calendários + lista
+            renderMonthUI();
+            renderWeeks();
+
+            // atualiza horários automaticamente
+            await fetchDay(selectedDate);
+
+            // se clicou no calendário da aba Reservar, fica lá
+            if (typeof onPick === "function") onPick();
+          };
+        } else {
+          // passado: não clica
+          cell.onclick = null;
+        }
+      } else {
+        cell.innerHTML = `<div class="n"></div>`;
       }
+
+      grid.appendChild(cell);
+    }
+  }
+
+  // Calendário da aba "Calendário": não troca de tab
+  renderInto("days", null);
+
+  // Calendário da aba "Reservar": garante que está na tab reserva ao clicar (opcional)
+  renderInto("daysRes", ()=>setTab("res"));
+}
+
 
       // ====== Weeks render ======
       function renderWeeks(){
@@ -979,6 +1013,9 @@ if (c > 0){
 
       $("prevMonth").onclick = async ()=>{ current.setMonth(current.getMonth()-1); await fetchMonth(); };
       $("nextMonth").onclick = async ()=>{ current.setMonth(current.getMonth()+1); await fetchMonth(); };
+      $("prevMonthRes").onclick = async ()=>{ current.setMonth(current.getMonth()-1); await fetchMonth(); };
+      $("nextMonthRes").onclick = async ()=>{ current.setMonth(current.getMonth()+1); await fetchMonth(); };
+
       $("reloadMonth").onclick = ()=>fetchMonth();
 
       $("toggleOlder").onclick = ()=>{
