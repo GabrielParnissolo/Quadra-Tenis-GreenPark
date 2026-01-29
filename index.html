@@ -518,18 +518,18 @@ b.textContent = count > 9 ? "9+" : count;
               cell.appendChild(b);
             }
            if (iso === todayIso){
-  cell.classList.add("todayCell"); // marca o dia de hoje
+  cell.classList.add("todayCell");
 
-  // troca a sigla do topo para "HOJE"
+  // troca a sigla por "HOJE"
   const wEl = cell.querySelector(".w");
   if (wEl) wEl.textContent = "HOJE";
 
-  // (opcional) mantém o todayTag para desktop antigo, mas se você ocultou no CSS, pode remover.
   const t = document.createElement("div");
   t.className = "todayTag";
   t.textContent = "Hoje";
   cell.appendChild(t);
 }
+
 
 
             if (!past){
