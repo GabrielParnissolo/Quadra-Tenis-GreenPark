@@ -7,7 +7,6 @@
 
   <!-- Supabase (2 CDNs para evitar bloqueio/instabilidade) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <!-- Mostrador de erro (fica visível na tela se o app quebrar) -->
   <script>
@@ -761,25 +760,38 @@
 
       // ====== Auth actions ======
       async function signIn(){
-        const phoneNorm = normalizePhone($("authPhone").value);
-        const pass = $("authPass").value;
+  try{
+    const phoneNorm = normalizePhone($("authPhone").value);
+    const pass = $("authPass").value;
 
-        if (!phoneNorm) return setAuthMessage("Digite seu telefone.");
-        if (!pass || pass.length < 6) return setAuthMessage("Digite uma senha (mínimo 6 caracteres).");
+    if (!phoneNorm) return setAuthMessage("Digite seu telefone.");
+    if (!pass || pass.length < 6) return setAuthMessage("Digite uma senha (mínimo 6 caracteres).");
 
-        setAuthMessage("Entrando...");
-        const email = phoneToEmail(phoneNorm);
+    setAuthMessage("Entrando...");
+    const email = phoneToEmail(phoneNorm);
 
-        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-        if (error){
-          setAuthMessage("Não deu para entrar: " + error.message);
-          return;
-        }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
 
-        setAuthMessage("");
-        await refreshSession();
-        await initAfterLogin();
-      }
+    if (error){
+      setAuthMessage("Não deu para entrar: " + error.message);
+      return;
+    }
+
+    // garante que a sessão existe
+    if (!data?.session){
+      setAuthMessage("Não foi criada sessão. Verifique se 'Confirm email' está OFF no provider Email.");
+      return;
+    }
+
+    setAuthMessage("");
+    await refreshSession();
+    await initAfterLogin();
+
+  } catch (e){
+    setAuthMessage("Falha ao entrar: " + (e?.message || String(e)));
+  }
+}
+
 
       async function signUp(){
   const phoneNorm = normalizePhone($("authPhone").value);
@@ -814,8 +826,8 @@
 }
 
 
-      $("btnSignIn").onclick = ()=>signIn();
-      $("btnSignUp").onclick = ()=>signUp();
+      $("btnSignIn").onclick = async ()=>{ await signIn(); };
+      $("btnSignUp").onclick = async ()=>{ await signUp(); };
       $("signOutBtn").onclick = async ()=>{
         await supabase.auth.signOut();
         currentUser = null;
